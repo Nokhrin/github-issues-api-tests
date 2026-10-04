@@ -1,4 +1,4 @@
-package org.nokhrin.github;
+package org.nokhrin.github.retrofit;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

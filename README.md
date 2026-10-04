@@ -1,9 +1,11 @@
 # Автоматизация тестирования REST API
 
 # Цель
+
 Тестирование сервиса `GitHub Issues`
 
 # Подготовка
+
 создан репо https://github.com/Nokhrin/api-testing-lab/
 созданы токены, записаны в .env в корне репозитория
 как
@@ -15,6 +17,7 @@ READ_TOKEN - сценарии "ошибка доступа" при измене�
 создан .gitignore с исключением `.env`
 
 # План
+
 - заглушки
 - авторизация и права доступа
 - GET /zen - проверка доступности.
@@ -38,13 +41,14 @@ READ_TOKEN - сценарии "ошибка доступа" при измене�
 - Проверка заголовков X-RateLimit-*.
 - Проверка структуры ошибки.
 
-
 # GitHub API
+
 [Документация](https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api?spm=a2ty_o01.29997173.0.0.50ad55fbEykyRG&apiVersion=2026-03-10)
 
 # Разработка
 
 ## Конфигурация
+
 ```shell
 # 1. Создать .env
 touch .env
@@ -53,4 +57,12 @@ chmod 600 .env
 # 3. Загрузить переменные и запустить тесты
 set -a; source .env; set +a;
 mvn test
+```
+
+## Чистка окружения
+
+Закрыть открытые issues
+
+```shell
+mvn test -Dcleanup=true -Dtest=CleanupRunner
 ```
