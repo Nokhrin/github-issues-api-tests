@@ -3,13 +3,12 @@ package utils;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
-import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
 public class IssueCleanupUtil {
-    public static void closeAllOpenIssues(RequestSpecification spec) {
+    public static void closeOpenIssues(RequestSpecification spec) {
         int page = 1;
         while (true) {
             List<Map<String, Object>> open = RestAssured.given()

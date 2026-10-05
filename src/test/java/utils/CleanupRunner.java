@@ -39,6 +39,6 @@ public class CleanupRunner {
     @Test
     @EnabledIfSystemProperty(named = "cleanup", matches = "true")
     void runCleanup() {
-        IssueCleanupUtil.closeAllOpenIssues(rwAuthSpec);
+        IssueCleanupUtil.closeOpenIssues(rwAuthSpec);
     }
 }

@@ -45,6 +45,8 @@ READ_TOKEN - сценарии "ошибка доступа" при измене�
 
 [Документация](https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api?spm=a2ty_o01.29997173.0.0.50ad55fbEykyRG&apiVersion=2026-03-10)
 
+[Спецификация OpenAPI](https://raw.githubusercontent.com/github/rest-api-description/refs/heads/main/descriptions/api.github.com/api.github.com.json)
+
 # Разработка
 
 ## Конфигурация

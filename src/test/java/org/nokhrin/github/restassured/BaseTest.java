@@ -21,7 +21,7 @@ public abstract class BaseTest {
 
     protected String baseUrl, owner, repo;
     protected TestConfig config;
-    protected RequestSpecification baseSpec,unAuthSpec, rwAuthSpec, roAuthSpec;
+    protected RequestSpecification baseSpec, unAuthSpec, rwAuthSpec, roAuthSpec;
 
     @BeforeAll
     void setUp() {
@@ -38,8 +38,8 @@ public abstract class BaseTest {
         baseSpec = new RequestSpecBuilder()
             .setBaseUri(baseUrl)
             .addHeader("Accept", "application/vnd.github+json")
-            .addHeader("X-GitHub-Api-Version", "2022-11-28")
-            .addHeader("User-Agent", "sqa-lab-tests/1.0")
+            .addHeader("X-GitHub-Api-Version", "2026-03-10")
+            .addHeader("User-Agent", owner)
             .build();
 
         unAuthSpec = new RequestSpecBuilder()
@@ -66,6 +66,10 @@ public abstract class BaseTest {
 
     protected final Long createIssue(String title, String body) {
         return createIssue(new Issue().setTitle(title).setBody(body));
+    }
+
+    protected final Long createIssue() {
+        return createIssue(randomIssueTitle(), randomIssueDescription());
     }
 
     protected final Long createIssue(Object requestBody) {
