@@ -1,5 +1,8 @@
 package org.nokhrin.github.restassured;
 
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -10,15 +13,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.nokhrin.github.model.Issue;
+import org.nokhrin.github.restassured.utils.IssueUtils;
+import org.nokhrin.github.restassured.utils.PaginationResult;
+import org.nokhrin.github.restassured.utils.WaitUtil;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static utils.IssueCleanupUtil.closeOpenIssues;
+import static org.nokhrin.github.config.Endpoints.ISSUES;
+import static org.nokhrin.github.restassured.utils.IssueUtils.closeOpenIssues;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class IssueTest extends BaseTest {
@@ -28,6 +38,8 @@ public class IssueTest extends BaseTest {
         closeOpenIssues(rwAuthSpec);
     }
 
+    @Feature("GitHub Issues API")
+    @Severity(SeverityLevel.CRITICAL)
     @Test
     public void createIssueRawJsonValid_Created() {
         String issueTitle = randomIssueTitle();
@@ -35,9 +47,8 @@ public class IssueTest extends BaseTest {
         String requestBody = """
             {"title": "%s", "body": "%s"}
             """.formatted(issueTitle, issueDescription);
-        Long issueNum = null;
 
-        issueNum = createIssue(requestBody);
+        Long issueNum = createIssue(requestBody);
         RestAssured.given()
             .spec(rwAuthSpec)
             .when()
@@ -47,6 +58,7 @@ public class IssueTest extends BaseTest {
             .log().ifValidationFails()
             .body("title", equalTo(issueTitle))
             .body("body", equalTo(issueDescription))
+            .body(matchesJsonSchemaInClasspath("schemas/issue-schema.json"))
         ;
 
     }
@@ -77,7 +89,7 @@ public class IssueTest extends BaseTest {
             .contentType(ContentType.JSON)
             .body(requestBody)
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(201)
             .extract()
@@ -119,7 +131,7 @@ public class IssueTest extends BaseTest {
             .queryParam("title", randomIssueTitle())
             .queryParam("body", randomIssueDescription())
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(422)
             .log().ifValidationFails()
@@ -151,7 +163,7 @@ public class IssueTest extends BaseTest {
             .contentType(ContentType.JSON)
             .body(body)
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(422)
             .body("message", equalTo("Validation Failed"))
@@ -211,29 +223,126 @@ public class IssueTest extends BaseTest {
 
     }
 
-    @Test
-    void invalidJsonBody_badRequest() {
-        String invalidBody = """
-            {
-              "title": "Found a bug",
-              "body": "I'm having a problem with this.",
-              "assignees": ["octocat"],
-              "milestone": 1,
-              "labels": ["bug"],
-            }
-            """;
+    private static Stream<Arguments> invalidJsonBodies() {
+        return Stream.of(
+            Arguments.of("trailing comma",
+                """
+                    {
+                      "title": "Found a bug",
+                      "body": "I'm having a problem with this.",
+                      "assignees": ["octocat"],
+                      "milestone": 1,
+                      "labels": ["bug"],
+                    }
+                    """),
+            Arguments.of("missing bracket",
+                """
+                    {
+                      "title": "Found a bug",
+                      "body": "I'm having a problem with this.",
+                      "assignees": ["octocat"],
+                      "milestone": 1,
+                      "labels": ["bug"
+                    }
+                    """),
+            Arguments.of("unquoted string value",
+                """
+                    {
+                      "title": Found a bug,
+                      "body": "I'm having a problem with this.",
+                      "assignees": ["octocat"],
+                      "milestone": 1,
+                      "labels": ["bug"]
+                    }
+                    """)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidJsonBodies")
+    void invalidJsonBody_badRequest(String scenario, String invalidBody) {
         RestAssured.given()
             .spec(rwAuthSpec)
             .contentType(ContentType.JSON)
             .body(invalidBody)
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(400)
             .body("message", containsStringIgnoringCase("json"))
             .body("documentation_url", notNullValue())
             .log().ifValidationFails()
         ;
+    }
+
+
+    @Test
+    void verifyRequiredFieldValidation() {
+        RestAssured.given()
+            .spec(rwAuthSpec)
+            .contentType(ContentType.JSON)
+            .body(Map.of(
+                "title", "",
+                "body", "I'm having a problem with this."
+            ))
+            .when()
+            .post(ISSUES)
+            .then()
+            .statusCode(422)
+            .log().all()
+            .log().ifValidationFails()
+            .body("message", containsStringIgnoringCase("Validation Failed"))
+            .body("errors[0].message", notNullValue())
+            .body("errors[0].value", nullValue())
+            .body("errors[0].resource", equalTo("Issue"))
+            .body("errors[0].field", equalTo("title"))
+            .body("errors[0].code", containsStringIgnoringCase("invalid"))
+            .body("documentation_url", notNullValue())
+            .body("status", equalTo("422"))
+        ;
+
+    }
+
+    @Test
+    void verifyValidationError_invalidMilestoneType() {
+        String body = """
+            {"title": "Found a bug", "milestone": "one"}
+            """;
+        RestAssured.given()
+            .spec(rwAuthSpec)
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when()
+            .post(ISSUES)
+            .then()
+            .statusCode(422)
+            .body("message", equalTo("Validation Failed"))
+            .body("errors[0].field", equalTo("milestone"))
+            .body("errors[0].value", equalTo("one"))
+            .body("errors[0].code", equalTo("invalid"))
+            .body("errors[0].resource", equalTo("Issue"))
+            .body("documentation_url", notNullValue());
+    }
+
+    @Test
+    void verifyValidationError_invalidLabelsType() {
+        String body = """
+            {"title": "Found a bug", "labels": {"name": "bug"}}
+            """;
+        RestAssured.given()
+            .spec(rwAuthSpec)
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when()
+            .post(ISSUES)
+            .then()
+            .statusCode(422)
+            .body("message", containsString("Invalid request"))
+            .body("message", containsString("not an array"))
+            .body("documentation_url", notNullValue())
+            .body("status", equalTo("422"))
+            .rootPath("")
+            .body("errors", nullValue());
     }
 
     @Test
@@ -253,7 +362,7 @@ public class IssueTest extends BaseTest {
             .contentType(ContentType.JSON)
             .body(invalidBody)
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(400)
             .body("message", containsStringIgnoringCase("json"))
@@ -266,7 +375,7 @@ public class IssueTest extends BaseTest {
             .queryParam("state", "open")
             .queryParam("per_page", 100)
             .when()
-            .get("/repos/{owner}/{repo}/issues")
+            .get(ISSUES)
             .then()
             .statusCode(200)
             .body(not(hasItem(issueTitle)))
@@ -290,173 +399,156 @@ public class IssueTest extends BaseTest {
 
     }
 
+
     @Test
-    void verifyValidationFailedResponseBody_SemanticError() {
-        String issueBody = randomIssueDescription();
-        Map<String, String> invalidBody = Map.of(
-            "title", "",
-            "body", issueBody
+    void verifyFilterByState_openedIssueReturned() {
+        Long openedIssueNumber = createIssue();
+
+        WaitUtil.waitFor(
+            () -> {
+                List<Long> allIssuesNumbers = IssueUtils.getIssueNumbersByState(rwAuthSpec, "open");
+                return allIssuesNumbers.contains(openedIssueNumber) ? allIssuesNumbers : null;
+            },
+            Duration.ofSeconds(10),
+            Duration.ofSeconds(1),
+            "test issue available"
         );
-        RestAssured.given()
-            .spec(rwAuthSpec)
-            .contentType(ContentType.JSON)
-            .body(invalidBody)
-            .when()
-            .post("/repos/{owner}/{repo}/issues")
-            .then()
-            .statusCode(422)
-            .log().ifValidationFails()
-            .body("message", containsStringIgnoringCase("Validation Failed"))
-            .body("errors[0].message", notNullValue())
-            .body("errors[0].value", nullValue())
-            .body("errors[0].resource", equalTo("Issue"))
-            .body("errors[0].field", equalTo("title"))
-            .body("errors[0].code", containsStringIgnoringCase("invalid"))
-            .body("documentation_url", notNullValue())
-            .body("status", equalTo("422"))
-        ;
 
-    }
-
-
-    private static Stream<Arguments> validStates() {
-        return Stream.of(
-            Arguments.of("open"),
-            Arguments.of("closed"),
-            Arguments.of("all")
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("validStates")
-    void verifyFilterByState(String state) {
+        String state = "open";
         Response response = RestAssured.given()
             .spec(rwAuthSpec)
             .queryParam("state", state)
+            .queryParam("since", Instant.now().minusSeconds(600).toString())
             .queryParam("per_page", 100)
-            .get("/repos/{owner}/{repo}/issues")
+            .get(ISSUES)
             .then()
             .statusCode(200)
             .log().ifValidationFails()
             .extract()
             .response();
 
-        response.prettyPrint();
-        List<String> issueStates = response
-            .jsonPath()
-            .getList("state", String.class);
+        List<String> issueStates = response.jsonPath().getList("state", String.class);
+        List<Long> issueNumbers = response.jsonPath().getList("number", Long.class);
 
-        if (state.equals("all")) {
-            assertThat(issueStates, everyItem(oneOf("open", "closed")));
-        } else {
-            assertThat(issueStates, everyItem(equalTo(state)));
-        }
+        assertAll(
+            () -> assertThat(issueStates, everyItem(equalTo(state))),
+            () -> assertThat(issueNumbers, hasItem(openedIssueNumber))
+        );
 
     }
 
     @Test
+    void verifyFilterByState_closedIssueReturned() {
+        Long closedIssueNumber = createIssue();
+        closeIssue(closedIssueNumber);
+
+        WaitUtil.waitFor(
+            () -> {
+                List<Long> allIssuesNumbers = IssueUtils.getIssueNumbersByState(rwAuthSpec, "closed");
+                return allIssuesNumbers.contains(closedIssueNumber) ? allIssuesNumbers : null;
+            },
+            Duration.ofSeconds(10),
+            Duration.ofSeconds(1),
+            "test issue available"
+        );
+
+        String state = "closed";
+        Response response = RestAssured.given()
+            .spec(rwAuthSpec)
+            .queryParam("state", state)
+            .queryParam("since", Instant.now().minusSeconds(600).toString())
+            .queryParam("per_page", 100)
+            .get(ISSUES)
+            .then()
+            .statusCode(200)
+            .log().ifValidationFails()
+            .extract()
+            .response();
+
+        List<String> issueStates = response.jsonPath().getList("state", String.class);
+        List<Long> issueNumbers = response.jsonPath().getList("number", Long.class);
+
+        assertAll(
+            () -> assertThat(issueStates, everyItem(equalTo(state))),
+            () -> assertThat(issueNumbers, hasItem(closedIssueNumber))
+        );
+    }
+
+    @Test
+    void verifyFilterByState_all() {
+        Long openedIssueNumber = createIssue();
+        Long closedIssueNumber = createIssue();
+        closeIssue(closedIssueNumber);
+
+        WaitUtil.waitFor(
+            () -> {
+                List<Long> allIssuesNumbers = IssueUtils.getIssueNumbersByState(rwAuthSpec, "all");
+                boolean openFound = allIssuesNumbers.contains(openedIssueNumber);
+                boolean closeFound = allIssuesNumbers.contains(closedIssueNumber);
+                return openFound && closeFound ? allIssuesNumbers : null;
+            },
+            Duration.ofSeconds(10),
+            Duration.ofSeconds(1),
+            "2 issues available"
+        );
+
+        Response response = RestAssured.given()
+            .spec(rwAuthSpec)
+            .queryParam("state", "all")
+            .queryParam("since", Instant.now().minusSeconds(600).toString())
+            .queryParam("per_page", 100)
+            .get(ISSUES)
+            .then()
+            .statusCode(200)
+            .log().ifValidationFails()
+            .extract()
+            .response();
+
+        List<Long> issueNumbers = response.jsonPath().getList("number", Long.class);
+
+        assertAll(
+            () -> assertThat(issueNumbers, hasItem(openedIssueNumber)),
+            () -> assertThat(issueNumbers, hasItem(closedIssueNumber))
+        );
+    }
+
+
+    @Test
     void verifyPagination() {
-        //предусловие: нет открытых issue
+
         closeOpenIssues(rwAuthSpec);
 
-        List<Long> idsExpected = new ArrayList<>();
+        List<Long> issueNumbersExpected = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
-            idsExpected.add(createIssue());
+            issueNumbersExpected.add(createIssue());
         }
 
         int per_page = 2;
 
-        //prep
-        int maxAttempts = 5;
-        int attempt = 0;
-        List<Long> idsActual = new ArrayList<>();
+        WaitUtil.waitFor(
+            () -> {
+                List<Long> issueNumbersActual = IssueUtils.getIssueNumbersByState(rwAuthSpec, "open");
+                return issueNumbersActual.size() == 3 ? issueNumbersActual : null;
+            },
+            Duration.ofSeconds(10),
+            Duration.ofSeconds(1),
+            "Creating 3 issues"
+        );
 
-        while (attempt < maxAttempts) {
+        PaginationResult page1 = IssueUtils.getIssuesPage(rwAuthSpec, 1, per_page);
+        PaginationResult page2 = IssueUtils.getIssuesPage(rwAuthSpec, 2, per_page);
+        List<Long> issueNumbersActual = new ArrayList<>(page1.issueNumbers());
+        issueNumbersActual.addAll(page2.issueNumbers());
 
-            Response probe = RestAssured.given()
-                .spec(rwAuthSpec)
-                .queryParam("filter", "all")
-                .queryParam("state", "open")
-                .queryParam("per_page", 100)
-                .when()
-                .get("/repos/{owner}/{repo}/issues")
-                .then()
-                .statusCode(200)
-                .log().ifValidationFails()
-                .extract()
-                .response();
-
-            idsActual = probe.jsonPath()
-                .getList("id", Long.class);
-
-            if (idsActual.size() == 3) {
-                break;
-            }
-            attempt++;
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-            }
-        }
-
-        if (idsActual.size() < 3) {
-            throw new AssertionError("Failed to fetch created issues");
-        }
-
-        //1
-        Response responsePage1 = RestAssured.given()
-            .spec(rwAuthSpec)
-            .queryParam("filter", "all")
-            .queryParam("state", "open")
-            .queryParam("per_page", per_page)
-            .queryParam("page", 1)
-            .when()
-            .get("/repos/{owner}/{repo}/issues")
-            .then()
-            .statusCode(200)
-            .log().ifValidationFails()
-            .extract()
-            .response();
-
-        List<Long> idsPage1 = responsePage1
-            .jsonPath()
-            .getList("id", Long.class);
-
-        String linkHeaderPage1 = responsePage1.getHeader("Link");
-
-        //2
-        Response responsePage2 = RestAssured.given()
-            .spec(rwAuthSpec)
-            .queryParam("filter", "all")
-            .queryParam("state", "open")
-            .queryParam("per_page", per_page)
-            .queryParam("page", 2)
-            .when()
-            .get("/repos/{owner}/{repo}/issues")
-            .then()
-            .statusCode(200)
-            .log().ifValidationFails()
-            .extract()
-            .response();
-
-        List<Long> idsPage2 = responsePage2
-            .jsonPath()
-            .getList("id", Long.class);
-
-        String linkHeaderPage2 = responsePage2.getHeader("Link");
-
-        List<Long> finalIdsActual = idsActual;
         assertAll(
-            () -> assertThat(idsPage1, hasSize(per_page)),
-            () -> assertThat(linkHeaderPage1, startsWithIgnoringCase("<https://api.github.com/repositories/")),
-            () -> assertThat(linkHeaderPage1, containsString("rel=\"next\"")),
-            () -> assertThat(idsPage2, hasSize(per_page)),
-            () -> assertThat(linkHeaderPage2, startsWithIgnoringCase("<https://api.github.com/repositories/")),
-            () -> assertThat(linkHeaderPage2, not(containsString("rel=\"next\""))),
-            () -> assertThat(Collections.disjoint(idsPage1, idsPage2), is(true)),
-            () -> assertThat(idsExpected, containsInAnyOrder(finalIdsActual))
+            () -> assertThat(page1.issueNumbers(), hasSize(2)),
+            () -> assertThat(page1.headerList(), startsWithIgnoringCase("<https://api.github.com/repositories/")),
+            () -> assertThat(page1.headerList(), containsString("rel=\"next\"")),
+            () -> assertThat(page2.issueNumbers(), hasSize(1)),
+            () -> assertThat(page2.headerList(), startsWithIgnoringCase("<https://api.github.com/repositories/")),
+            () -> assertThat(page2.headerList(), containsString("rel=\"prev\"")),
+            () -> assertThat(Collections.disjoint(page1.issueNumbers(), page2.issueNumbers()), is(true)),
+            () -> assertThat(issueNumbersActual, containsInAnyOrder(issueNumbersExpected.toArray(new Long[0])))
         );
     }
 
@@ -464,7 +556,7 @@ public class IssueTest extends BaseTest {
     void verifyXRateLimitHeaders() {
         Response response = RestAssured.given()
             .spec(rwAuthSpec)
-            .get("/repos/{owner}/{repo}/issues")
+            .get(ISSUES)
             .then()
             .statusCode(200)
             .log().ifValidationFails()
@@ -484,11 +576,11 @@ public class IssueTest extends BaseTest {
             () -> assertThat(resource, notNullValue()),
             () -> assertThat(reset, notNullValue()),
 
-            () -> assertThat(limit, matchesPattern("d+")),
-            () -> assertThat(remaining, matchesPattern("d+")),
-            () -> assertThat(used, matchesPattern("d+")),
+            () -> assertThat(limit, matchesPattern("\\d+")),
+            () -> assertThat(remaining, matchesPattern("\\d+")),
+            () -> assertThat(used, matchesPattern("\\d+")),
             () -> assertThat(resource, equalTo("core")),
-            () -> assertThat(reset, matchesPattern("d+")),
+            () -> assertThat(reset, matchesPattern("\\d+")),
 
             () -> {
                 Integer limitInt = Integer.parseInt(limit);
@@ -503,6 +595,98 @@ public class IssueTest extends BaseTest {
             }
 
         );
+    }
+
+
+    private static Stream<Arguments> fieldValidationErrorScenarios() {
+        return Stream.of(
+            Arguments.of(
+                "empty required field",
+                Map.of("title", "", "body", "valid body"),
+                "Validation Failed"
+            ),
+            Arguments.of(
+                "invalid field type",
+                """
+                    {"title": "test", "milestone": "one"}""",
+                "Validation Failed"
+            )
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("fieldValidationErrorScenarios")
+    void verifyValidationFieldTypeErrorFormats(
+        String scenario,
+        Object body,
+        String expectedMessageFragment
+    ) {
+        RestAssured.given()
+            .spec(rwAuthSpec)
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when()
+            .post(ISSUES)
+            .then()
+            .statusCode(422)
+            .body("message", containsStringIgnoringCase(expectedMessageFragment))
+            .body("documentation_url", notNullValue())
+            .body("status", equalTo("422"))
+            .body("errors", notNullValue())
+            .body("errors", not(empty()));
+    }
+
+    private static Stream<Arguments> validationErrorScenarios() {
+        return Stream.of(
+            Arguments.of(
+                "schema violation",
+                """
+                    {"title": "test", "labels": {"name": "bug"}}""",
+                "Invalid request"
+            ),
+            Arguments.of(
+                "missing required field",
+                Map.of("body", "no title"),
+                "wasn't supplied"
+            )
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("validationErrorScenarios")
+    void verifyValidationErrorFormats(
+        String scenario,
+        Object body,
+        String expectedMessageFragment
+    ) {
+        RestAssured.given()
+            .spec(rwAuthSpec)
+            .contentType(ContentType.JSON)
+            .body(body)
+            .when()
+            .post(ISSUES)
+            .then()
+            .statusCode(422)
+            .body("message", containsStringIgnoringCase(expectedMessageFragment))
+            .body("documentation_url", notNullValue())
+            .body("status", equalTo("422"))
+            .body("errors", nullValue());
 
     }
+
+    @Test
+    void issueResponseMatchesIssueSchema() {
+        Long issueNumber = createIssue();
+        RestAssured.given()
+            .spec(rwAuthSpec)
+            .accept(ContentType.JSON)
+            .when()
+            .get("/repos/{owner}/{repo}/issues/{issue_number}", issueNumber)
+            .then()
+            .statusCode(200)
+            .log().all()
+            .body(matchesJsonSchemaInClasspath("schemas/issue-schema.json"));
+    }
+
+
 }

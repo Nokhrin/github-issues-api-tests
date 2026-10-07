@@ -4,3 +4,5 @@ target/
 .editorconfig
 .env*
 !.env.example
+allure-results/
+.allure/

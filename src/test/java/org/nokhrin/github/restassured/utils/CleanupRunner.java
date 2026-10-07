@@ -1,4 +1,4 @@
-package utils;
+package org.nokhrin.github.restassured.utils;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
@@ -39,6 +39,6 @@ public class CleanupRunner {
     @Test
     @EnabledIfSystemProperty(named = "cleanup", matches = "true")
     void runCleanup() {
-        IssueCleanupUtil.closeOpenIssues(rwAuthSpec);
+        IssueUtils.closeOpenIssues(rwAuthSpec);
     }
 }

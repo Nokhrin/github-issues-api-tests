@@ -1,21 +1,27 @@
 package org.nokhrin.github.restassured;
 
+import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
 import io.restassured.RestAssured;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.equalTo;
+import static org.nokhrin.github.config.Endpoints.REPO;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class RepoTest extends BaseTest {
 
+    @Feature("GitHub Issues API")
+    @Severity(SeverityLevel.CRITICAL)
     @Test
-    public void verifyIssuesContainTest() {
+    public void verifyIssuesContainsFields() {
         RestAssured.given()
             .spec(rwAuthSpec)
             .when()
-            .get("/repos/{owner}/{repo}")
+            .get(REPO)
             .then()
             .statusCode(200)
             .body("name", equalTo(config.githubRepo()))
@@ -23,6 +29,7 @@ public class RepoTest extends BaseTest {
             .body("owner.login", equalTo(config.githubOwner()))
             .body("private", equalTo(true))
             .body("default_branch", equalTo("main"))
+            .body(matchesJsonSchemaInClasspath("schemas/repository-schema.json"))
             .log().ifValidationFails()
         ;
     }
@@ -32,7 +39,7 @@ public class RepoTest extends BaseTest {
         RestAssured.given()
             .spec(unAuthSpec)
             .when()
-            .get("/repos/{owner}/{repo}")
+            .get(REPO)
             .then()
             .statusCode(404)
             .log().ifValidationFails()
@@ -41,7 +48,7 @@ public class RepoTest extends BaseTest {
         RestAssured.given()
             .spec(rwAuthSpec)
             .when()
-            .get("/repos/{owner}/{repo}")
+            .get(REPO)
             .then()
             .statusCode(200)
             .body("owner.login", equalTo(config.githubOwner()))
@@ -49,4 +56,28 @@ public class RepoTest extends BaseTest {
         ;
     }
 
+    @Test
+    void publicReposUnauth_responseReceived() {
+        RestAssured.given()
+            .spec(baseSpec)
+            .when()
+            .get("/repositories")
+            .then()
+            .statusCode(200)
+            .log().ifValidationFails()
+        ;
+    }
+
+    @Test
+    void repoResponseMatchesJsonSchema() {
+        RestAssured.given()
+            .spec(roAuthSpec)
+            .when()
+            .get(REPO)
+            .then()
+            .statusCode(200)
+            .body(matchesJsonSchemaInClasspath("schemas/repository-schema.json"))
+            .log().all()
+        ;
+    }
 }

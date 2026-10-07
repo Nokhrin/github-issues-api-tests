@@ -15,9 +15,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
+import static org.nokhrin.github.config.Endpoints.ISSUES;
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BaseTest {
-    protected final Logger LOGGER = LoggerFactory.getLogger(IssueTest.class);
+    protected final Logger LOGGER = LoggerFactory.getLogger(BaseTest.class);
 
     protected String baseUrl, owner, repo;
     protected TestConfig config;
@@ -78,7 +80,7 @@ public abstract class BaseTest {
             .contentType(ContentType.JSON)
             .body(requestBody)
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(201)
             .log().ifValidationFails()

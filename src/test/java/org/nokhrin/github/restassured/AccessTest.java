@@ -6,6 +6,7 @@ import org.junit.jupiter.api.TestInstance;
 
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.nokhrin.github.config.Endpoints.ISSUES;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AccessTest extends BaseTest {
@@ -16,7 +17,7 @@ public class AccessTest extends BaseTest {
         RestAssured.given()
             .spec(roAuthSpec)
             .when()
-            .post("/repos/{owner}/{repo}/issues")
+            .post(ISSUES)
             .then()
             .statusCode(403)
             .body("message", containsStringIgnoringCase("not accessible"))
