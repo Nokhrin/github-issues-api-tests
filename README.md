@@ -58,3 +58,7 @@ mvn -Dallure.results.directory=/tmp/allure allure:serve
 # Открыть отчёт в браузере
 firefox target/site/allure-maven-plugin/index.html
 ```
+
+## Взаимодействие по протоколам
+Пример (REST): GET /repos/{owner}/{repo}/issues -> HTTP 200, массив объектов JSON
+Пример (GraphQL): POST /graphql -> HTTP 200, объект JSON с обязательным ключом data (или errors)

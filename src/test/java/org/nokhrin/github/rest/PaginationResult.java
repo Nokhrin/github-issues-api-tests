@@ -1,4 +1,4 @@
-package org.nokhrin.github.restassured.utils;
+package org.nokhrin.github.rest;
 
 import java.util.List;
 

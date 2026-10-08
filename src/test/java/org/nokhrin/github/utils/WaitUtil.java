@@ -1,10 +1,9 @@
-package org.nokhrin.github.restassured.utils;
+package org.nokhrin.github.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.function.Supplier;
 
 public class WaitUtil {

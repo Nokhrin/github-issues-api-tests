@@ -1,9 +1,10 @@
-package org.nokhrin.github.restassured.utils;
+package org.nokhrin.github.utils;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import org.nokhrin.github.rest.PaginationResult;
 
 import java.time.Instant;
 import java.util.List;

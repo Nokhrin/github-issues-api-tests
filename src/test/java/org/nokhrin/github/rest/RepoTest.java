@@ -1,4 +1,4 @@
-package org.nokhrin.github.restassured;
+package org.nokhrin.github.rest;
 
 import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
@@ -12,7 +12,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.nokhrin.github.config.Endpoints.REPO;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class RepoTest extends BaseTest {
+public class RepoTest extends RestBaseTest {
 
     @Feature("GitHub Issues API")
     @Severity(SeverityLevel.CRITICAL)
