@@ -1,4 +1,4 @@
-package org.nokhrin.github.restassured;
+package org.nokhrin.github.rest;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
@@ -18,8 +18,8 @@ import java.util.Map;
 import static org.nokhrin.github.config.Endpoints.ISSUES;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class BaseTest {
-    protected final Logger LOGGER = LoggerFactory.getLogger(BaseTest.class);
+public abstract class RestBaseTest {
+    protected final Logger LOGGER = LoggerFactory.getLogger(RestBaseTest.class);
 
     protected String baseUrl, owner, repo;
     protected TestConfig config;

@@ -1,4 +1,4 @@
-package org.nokhrin.github.restassured;
+package org.nokhrin.github.rest;
 
 import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
@@ -13,9 +13,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.nokhrin.github.model.Issue;
-import org.nokhrin.github.restassured.utils.IssueUtils;
-import org.nokhrin.github.restassured.utils.PaginationResult;
-import org.nokhrin.github.restassured.utils.WaitUtil;
+import org.nokhrin.github.utils.IssueUtils;
+import org.nokhrin.github.utils.WaitUtil;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -28,10 +27,10 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.nokhrin.github.config.Endpoints.ISSUES;
-import static org.nokhrin.github.restassured.utils.IssueUtils.closeOpenIssues;
+import static org.nokhrin.github.utils.IssueUtils.closeOpenIssues;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class IssueTest extends BaseTest {
+public class IssueTest extends RestBaseTest {
 
     @AfterAll
     void tearDown() {

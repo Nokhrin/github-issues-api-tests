@@ -1,4 +1,4 @@
-package org.nokhrin.github.restassured;
+package org.nokhrin.github.rest;
 
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Test;
@@ -9,7 +9,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.nokhrin.github.config.Endpoints.ISSUES;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class AccessTest extends BaseTest {
+public class AccessTest extends RestBaseTest {
 
 
     @Test
