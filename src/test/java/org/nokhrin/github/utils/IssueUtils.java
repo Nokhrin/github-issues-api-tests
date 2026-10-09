@@ -4,12 +4,15 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import org.nokhrin.github.config.GitHubEndpoints;
 import org.nokhrin.github.rest.PaginationResult;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.equalTo;
 import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
 
 public class IssueUtils {
@@ -85,4 +88,22 @@ public class IssueUtils {
             .getList("number", Long.class);
     }
 
+    public static void waitIssueReadable(RequestSpecification spec, Long issueNumber) {
+        WaitUtil.waitFor(
+            () -> {
+                int status = RestAssured.given()
+                    .spec(spec)
+                    .when()
+                    .get(GitHubEndpoints.ISSUE_BY_NUMBER, issueNumber)
+                    .then()
+                    .body("number", equalTo(issueNumber.intValue()))
+                    .extract()
+                    .statusCode();
+                return status == 200 ? issueNumber : null;
+            },
+            Duration.ofSeconds(15),
+            Duration.ofSeconds(1),
+            "issue #" + issueNumber + " is readable"
+        );
+    }
 }

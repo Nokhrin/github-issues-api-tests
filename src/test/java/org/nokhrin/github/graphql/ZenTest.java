@@ -3,6 +3,7 @@ package org.nokhrin.github.graphql;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.nokhrin.github.utils.ReadResource;
@@ -17,6 +18,7 @@ import static org.nokhrin.github.config.GitHubEndpoints.GRAPHQL;
 public class ZenTest extends GraphQLBaseTest {
 
     @Test
+    @Tag("read")
     public void verify_GraphQLendPointAvailable_tokenValid_gqlRequestValid() {
         String query = ReadResource.readResource("graphql/healthcheck.graphql");
 
