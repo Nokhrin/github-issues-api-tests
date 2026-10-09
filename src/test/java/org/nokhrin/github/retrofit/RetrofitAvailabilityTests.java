@@ -8,10 +8,7 @@ import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.*;
 import org.nokhrin.github.config.GitHubMediaTypes;
 import org.nokhrin.github.config.HttpClientFactory;
 import org.nokhrin.github.config.TestConfig;
@@ -113,6 +110,7 @@ public class RetrofitAvailabilityTests {
         01. Проверяем, что приходит 200 код в ответ на простой GET
     */
     @Test
+    @Tag("read")
     public void verifyHealthcheckTest() throws IOException {
         Response<String> response = gitHubServiceUnAuth.getZen().execute();
         assertAll(
@@ -124,6 +122,7 @@ public class RetrofitAvailabilityTests {
         02. Проверяем, что приходит непустое тело ответа на простой GET
     */
     @Test
+    @Tag("read")
     public void verifyDefunktBodyTest() throws IOException {
         Response<String> response = gitHubServiceUnAuth.getZen().execute();
         assertAll(
@@ -139,6 +138,7 @@ public class RetrofitAvailabilityTests {
         03. Проверяем, что тело ответа содержит поле, равное значению
     */
     @Test
+    @Tag("read")
     public void verifyIssuesContainTest() throws IOException {
         Issue issue = new Issue()
             .setTitle(issueTitle)
@@ -178,6 +178,7 @@ public class RetrofitAvailabilityTests {
         04. Проверяем, что тело ответа содержит поле после авторизации
     */
     @Test
+    @Tag("read")
     public void verifyIssuesAuthorized() throws IOException {
         Response<Repository> unAuthResponse = gitHubServiceUnAuth.getRepo(owner, repo).execute();
         assertEquals(404, unAuthResponse.code());
@@ -204,6 +205,7 @@ public class RetrofitAvailabilityTests {
         05. Проверяем, что тело ответа содержит ошибку и 403 код
     */
     @Test
+    @Tag("read")
     public void verifyIssuesNoUserAgent() throws IOException {
         OkHttpClient noAgentClient = authClient.newBuilder()
             .addNetworkInterceptor(chain -> chain.proceed(
@@ -234,6 +236,7 @@ public class RetrofitAvailabilityTests {
         06. Проверяем, что ишью публикуется
     */
     @Test
+    @Tag("read")
     public void verifyPostIssues() throws IOException {
         String rawJson = """
             {"title": "%s", "body": "%s"}
@@ -280,6 +283,7 @@ public class RetrofitAvailabilityTests {
         07. Проверяем, что тело ответа содержит ошибку и 403 код
     */
     @Test
+    @Tag("read")
     public void verifyPostIssuesUrlParam() throws IOException {
         Response<ResponseBody> response = gitHubServiceAuth
             .createIssueQuery(owner, repo, issueTitle, issueDescription)
@@ -299,6 +303,7 @@ public class RetrofitAvailabilityTests {
         08. Проверяем, что ишью публикуется (тело запроса в POJO)
     */
     @Test
+    @Tag("read")
     public void verifyPostPojo() throws IOException {
         Issue issue = new Issue()
             .setTitle(issueTitle)
@@ -333,6 +338,7 @@ public class RetrofitAvailabilityTests {
         09. Проверяем, что ишью публикуется (тело запроса в Map)
     */
     @Test
+    @Tag("read")
     public void verifyPostMap() throws IOException {
         Map<String, Object> requestBody = Map.of(
             "title", issueTitle,

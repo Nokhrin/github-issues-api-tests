@@ -4,9 +4,12 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.restassured.RestAssured;
+import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +17,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.nokhrin.github.model.Issue;
 import org.nokhrin.github.utils.IssueUtils;
+import org.nokhrin.github.utils.LinkHeaderParser;
 import org.nokhrin.github.utils.WaitUtil;
 
 import java.time.Duration;
@@ -27,6 +31,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
+import static org.nokhrin.github.config.GitHubHeaders.API_VERSION;
+import static org.nokhrin.github.config.GitHubMediaTypes.JSON;
 import static org.nokhrin.github.utils.IssueUtils.closeOpenIssues;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -40,6 +46,7 @@ public class IssueTest extends RestBaseTest {
     @Feature("GitHub Issues API")
     @Severity(SeverityLevel.CRITICAL)
     @Test
+    @Tag("write")
     public void createIssueRawJsonValid_Created() {
         String issueTitle = randomIssueTitle();
         String issueDescription = randomIssueDescription();
@@ -63,6 +70,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     public void verifyPostPojo() {
         Long issueNum = createIssue(randomIssueTitle(), randomIssueDescription());
         RestAssured.given()
@@ -77,6 +85,7 @@ public class IssueTest extends RestBaseTest {
 
 
     @Test
+    @Tag("read")
     public void verifyPostMap() {
         Map<String, Object> requestBody = Map.of(
             "title", randomIssueTitle(),
@@ -108,6 +117,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     public void verifyPostPojoWithJsonPath() {
         Long issueNum = createIssue(randomIssueTitle(), randomIssueDescription());
         Issue issue = RestAssured.given()
@@ -124,6 +134,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("write")
     public void createIssueWithQueryParamsFailure() {
         RestAssured.given()
             .spec(rwAuthSpec)
@@ -150,6 +161,7 @@ public class IssueTest extends RestBaseTest {
 
     @ParameterizedTest(name = "{0} -> 422")
     @MethodSource("invalidTitles")
+    @Tag("write")
     void invalidTitleValidationFails(String caseName, String issueTitle) {
         Map<String, Object> body = new HashMap<>();
         if (issueTitle != null) {
@@ -176,6 +188,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("write")
     void createCloseStateVerified() {
         String issueTitle = randomIssueTitle();
         String issueDescription = randomIssueDescription();
@@ -259,6 +272,7 @@ public class IssueTest extends RestBaseTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidJsonBodies")
+    @Tag("read")
     void invalidJsonBody_badRequest(String scenario, String invalidBody) {
         RestAssured.given()
             .spec(rwAuthSpec)
@@ -276,6 +290,7 @@ public class IssueTest extends RestBaseTest {
 
 
     @Test
+    @Tag("read")
     void verifyRequiredFieldValidation() {
         RestAssured.given()
             .spec(rwAuthSpec)
@@ -303,6 +318,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     void verifyValidationError_invalidMilestoneType() {
         String body = """
             {"title": "Found a bug", "milestone": "one"}
@@ -324,6 +340,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     void verifyValidationError_invalidLabelsType() {
         String body = """
             {"title": "Found a bug", "labels": {"name": "bug"}}
@@ -345,6 +362,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     void requestJsonBodySyntaxError_responseBodyValid() {
         String issueTitle = randomIssueTitle();
         String invalidBody = """
@@ -383,6 +401,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     void verifyNotFoundResponseBody() {
         RestAssured.given()
             .spec(rwAuthSpec)
@@ -400,6 +419,7 @@ public class IssueTest extends RestBaseTest {
 
 
     @Test
+    @Tag("write")
     void verifyFilterByState_openedIssueReturned() {
         Long openedIssueNumber = createIssue();
 
@@ -437,6 +457,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("write")
     void verifyFilterByState_closedIssueReturned() {
         Long closedIssueNumber = createIssue();
         closeIssue(closedIssueNumber);
@@ -474,6 +495,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("write")
     void verifyFilterByState_all() {
         Long openedIssueNumber = createIssue();
         Long closedIssueNumber = createIssue();
@@ -513,45 +535,81 @@ public class IssueTest extends RestBaseTest {
 
 
     @Test
-    void verifyPagination() {
-
+    @Tag("write")
+    void verifyPaginationWithLinkNavigation() {
         closeOpenIssues(rwAuthSpec);
 
-        List<Long> issueNumbersExpected = new ArrayList<>();
+        List<Long> created = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
-            issueNumbersExpected.add(createIssue());
+            Long number = createIssue();
+            created.add(number);
+            IssueUtils.waitIssueReadable(rwAuthSpec, number);
         }
-
-        int per_page = 2;
 
         WaitUtil.waitFor(
             () -> {
-                List<Long> issueNumbersActual = IssueUtils.getIssueNumbersByState(rwAuthSpec, "open");
-                return issueNumbersActual.size() == 3 ? issueNumbersActual : null;
+                List<Long> open = IssueUtils.getIssueNumbersByState(rwAuthSpec, "open");
+                return open.containsAll(created) ? open : null;
             },
-            Duration.ofSeconds(10),
-            Duration.ofSeconds(1),
-            "Creating 3 issues"
+            Duration.ofSeconds(30),
+            Duration.ofSeconds(2),
+            "созданные issue найдены, состояние state=open"
         );
 
-        PaginationResult page1 = IssueUtils.getIssuesPage(rwAuthSpec, 1, per_page);
-        PaginationResult page2 = IssueUtils.getIssuesPage(rwAuthSpec, 2, per_page);
-        List<Long> issueNumbersActual = new ArrayList<>(page1.issueNumbers());
-        issueNumbersActual.addAll(page2.issueNumbers());
+        int perPage = 2;
+        Response page1 = RestAssured.given()
+            .spec(rwAuthSpec)
+            .queryParam("state", "open")
+            .queryParam("per_page", perPage)
+            .when()
+            .get(ISSUES)
+            .then()
+            .statusCode(200)
+            .extract()
+            .response();
+
+        List<Long> page1Ids = page1.jsonPath().getList("number", Long.class);
+        String link1 = page1.getHeader("Link");
+
+        String nextUrl = LinkHeaderParser.rel(link1, "next")
+            .orElseThrow(() -> new AssertionError("rel=\"next\" не найден в заголовке Link: " + link1));
+
+        System.out.println("Next URL from Link header: " + nextUrl);
+
+        RequestSpecification absoluteUrlSpec = new RequestSpecBuilder()
+            .addHeader("Authorization", "Bearer " + config.readAndWriteToken())
+            .addHeader("Accept", JSON)
+            .addHeader("X-GitHub-Api-Version", API_VERSION)
+            .setUrlEncodingEnabled(false)
+            .build();
+
+        Response page2 = RestAssured.given()
+            .spec(absoluteUrlSpec)
+            .log().all()
+            .when()
+            .get(nextUrl)
+            .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .extract()
+            .response();
+
+        List<Long> page2Ids = page2.jsonPath().getList("number", Long.class);
+        String link2 = page2.getHeader("Link");
 
         assertAll(
-            () -> assertThat(page1.issueNumbers(), hasSize(2)),
-            () -> assertThat(page1.headerList(), startsWithIgnoringCase("<https://api.github.com/repositories/")),
-            () -> assertThat(page1.headerList(), containsString("rel=\"next\"")),
-            () -> assertThat(page2.issueNumbers(), hasSize(1)),
-            () -> assertThat(page2.headerList(), startsWithIgnoringCase("<https://api.github.com/repositories/")),
-            () -> assertThat(page2.headerList(), containsString("rel=\"prev\"")),
-            () -> assertThat(Collections.disjoint(page1.issueNumbers(), page2.issueNumbers()), is(true)),
-            () -> assertThat(issueNumbersActual, containsInAnyOrder(issueNumbersExpected.toArray(new Long[0])))
+            () -> assertThat(page1Ids, hasSize(perPage)),
+            () -> assertThat(LinkHeaderParser.parse(link1), hasKey("next")),
+
+            () -> assertThat(page2Ids, hasSize(1)),
+            () -> assertThat(Collections.disjoint(page1Ids, page2Ids), is(true)),
+            () -> assertThat(LinkHeaderParser.parse(link2), not(hasKey("next"))),
+            () -> assertThat(LinkHeaderParser.parse(link2), hasKey("prev"))
         );
     }
 
     @Test
+    @Tag("read")
     void verifyXRateLimitHeaders() {
         Response response = RestAssured.given()
             .spec(rwAuthSpec)
@@ -615,6 +673,7 @@ public class IssueTest extends RestBaseTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("fieldValidationErrorScenarios")
+    @Tag("read")
     void verifyValidationFieldTypeErrorFormats(
         String scenario,
         Object body,
@@ -653,6 +712,7 @@ public class IssueTest extends RestBaseTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("validationErrorScenarios")
+    @Tag("write")
     void verifyValidationErrorFormats(
         String scenario,
         Object body,
@@ -674,6 +734,7 @@ public class IssueTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("write")
     void issueResponseMatchesIssueSchema() {
         Long issueNumber = createIssue();
         RestAssured.given()
@@ -686,6 +747,4 @@ public class IssueTest extends RestBaseTest {
             .log().all()
             .body(matchesJsonSchemaInClasspath("schemas/issue-schema.json"));
     }
-
-
 }

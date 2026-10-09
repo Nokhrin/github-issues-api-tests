@@ -1,6 +1,7 @@
 package org.nokhrin.github.rest;
 
 import io.restassured.RestAssured;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -13,6 +14,7 @@ public class AccessTest extends RestBaseTest {
 
 
     @Test
+    @Tag("read")
     void createIssueReadOnlyFailed() {
         RestAssured.given()
             .spec(roAuthSpec)
@@ -27,6 +29,7 @@ public class AccessTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("write")
     void updateIssueReadOnlyFailed() {
         Long issueNumber = createIssue(randomIssueTitle(), randomIssueDescription());
 

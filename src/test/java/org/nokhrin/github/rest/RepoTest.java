@@ -4,6 +4,7 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.restassured.RestAssured;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
@@ -17,6 +18,7 @@ public class RepoTest extends RestBaseTest {
     @Feature("GitHub Issues API")
     @Severity(SeverityLevel.CRITICAL)
     @Test
+    @Tag("read")
     public void verifyIssuesContainsFields() {
         RestAssured.given()
             .spec(rwAuthSpec)
@@ -35,6 +37,7 @@ public class RepoTest extends RestBaseTest {
     }
 
     @Test
+    @Tag("read")
     public void requestAuthResponseContainsField() {
         RestAssured.given()
             .spec(unAuthSpec)
