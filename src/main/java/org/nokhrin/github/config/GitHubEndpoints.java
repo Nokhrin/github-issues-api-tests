@@ -1,8 +1,8 @@
 package org.nokhrin.github.config;
 
-public class Endpoints {
+public final class GitHubEndpoints {
 
-    private Endpoints() {
+    private GitHubEndpoints() {
     }
 
     public static final String REPO = "/repos/{owner}/{repo}";

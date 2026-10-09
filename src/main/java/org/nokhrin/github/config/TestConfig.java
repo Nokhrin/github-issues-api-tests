@@ -31,7 +31,7 @@ public record TestConfig(
     @NotNull
     @Override
     public String toString() {
-        return String.format("""
+        return """
             TestConfig:
                 githubBaseUrl = '%s'
                 githubOwner = '%s'
@@ -44,6 +44,6 @@ public record TestConfig(
             githubRepo,
             readAndWriteToken.length(),
             readToken.length()
-        ));
+        );
     }
 }
