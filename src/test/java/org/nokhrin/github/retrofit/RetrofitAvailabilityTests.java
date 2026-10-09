@@ -2,19 +2,24 @@ package org.nokhrin.github.retrofit;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.nokhrin.github.model.Issue;
-import org.nokhrin.github.model.Repository;
-import org.nokhrin.github.service.GitHubService;
-import org.nokhrin.github.config.TestConfig;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.nokhrin.github.config.GitHubMediaTypes;
+import org.nokhrin.github.config.HttpClientFactory;
+import org.nokhrin.github.config.TestConfig;
+import org.nokhrin.github.model.Issue;
+import org.nokhrin.github.model.Repository;
+import org.nokhrin.github.service.GitHubService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -27,9 +32,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class RetrofitAvailabilityTests {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RetrofitAvailabilityTests.class);
+
+    private static Retrofit authRetrofit;
+    private static OkHttpClient authClient;
 
     private static GitHubService gitHubServiceAuth;
-    private static GitHubService gitHubServiceUnauth;
+    private static GitHubService gitHubServiceUnAuth;
 
     private String issueTitle = String.format("issue %s", RandomStringUtils.randomAlphabetic(5));
     private String issueDescription = "Description of new issue";
@@ -51,50 +60,53 @@ public class RetrofitAvailabilityTests {
         owner = config.githubOwner();
         repo = config.githubRepo();
 
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(System.out::println);
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(LOGGER::debug);
+
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         loggingInterceptor.redactHeader("Authorization");
 
-        OkHttpClient authClient = new OkHttpClient.Builder()
-                .addInterceptor(chain -> chain.proceed(
-                        chain.request().newBuilder()
-                                .header("User-Agent", "sqa-lab-tests/1.0")
-                                .header("Accept", "application/vnd.github+json")
-                                .header("Authorization", "Bearer " + config.readAndWriteToken())
-                                .build()
-                ))
-                .addInterceptor(loggingInterceptor)
-                .build();
+        Interceptor baseHeaders = chain -> chain.proceed(
+            chain.request().newBuilder()
+                .header("User-Agent", owner)
+                .header("Accept", GitHubMediaTypes.JSON)
+                .build()
+        );
 
-        OkHttpClient unauthClient = new OkHttpClient.Builder()
-                .addInterceptor(chain -> chain.proceed(
-                        chain.request().newBuilder()
-                                .header("User-Agent", "sqa-lab-tests/1.0")
-                                .header("Accept", "application/vnd.github+json")
-                                .build()
-                ))
-                .addInterceptor(loggingInterceptor)
-                .build();
+        Interceptor authHeaders = chain -> chain.proceed(
+            chain.request().newBuilder()
+                .header("User-Agent", owner)
+                .header("Accept", GitHubMediaTypes.JSON)
+                .header("Authorization", "Bearer " + config.readAndWriteToken())
+                .build()
+        );
+
+        OkHttpClient unAuthClient = HttpClientFactory.create(baseHeaders, loggingInterceptor);
+        authClient = HttpClientFactory.create(authHeaders, loggingInterceptor);
 
         ObjectMapper mapper = new ObjectMapper()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
 
-        Retrofit authRetrofit = new Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(authClient)
-                .addConverterFactory(ScalarsConverterFactory.create())
-                .addConverterFactory(JacksonConverterFactory.create(mapper))
-                .build();
+        authRetrofit = new Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(authClient)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(JacksonConverterFactory.create(mapper))
+            .build();
         gitHubServiceAuth = authRetrofit.create(GitHubService.class);
 
-        Retrofit unauthRetrofit = new Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(unauthClient)
-                .addConverterFactory(ScalarsConverterFactory.create())
-                .addConverterFactory(JacksonConverterFactory.create(mapper))
-                .build();
-        gitHubServiceUnauth = unauthRetrofit.create(GitHubService.class);
+        Retrofit unAuthRetrofit = new Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(unAuthClient)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(JacksonConverterFactory.create(mapper))
+            .build();
+        gitHubServiceUnAuth = unAuthRetrofit.create(GitHubService.class);
+    }
+
+    @AfterAll
+    void tearDown() {
+        HttpClientFactory.shutdown();
     }
 
     /*
@@ -102,9 +114,9 @@ public class RetrofitAvailabilityTests {
     */
     @Test
     public void verifyHealthcheckTest() throws IOException {
-        Response<String> response = gitHubServiceUnauth.getZen().execute();
+        Response<String> response = gitHubServiceUnAuth.getZen().execute();
         assertAll(
-                () -> assertEquals(200, response.code())
+            () -> assertEquals(200, response.code())
         );
     }
 
@@ -113,13 +125,13 @@ public class RetrofitAvailabilityTests {
     */
     @Test
     public void verifyDefunktBodyTest() throws IOException {
-        Response<String> response = gitHubServiceUnauth.getZen().execute();
+        Response<String> response = gitHubServiceUnAuth.getZen().execute();
         assertAll(
-                () -> assertEquals(200, response.code()),
-                () -> {
-                    assertNotNull(response.body());
-                    assertFalse(response.body().isBlank());
-                }
+            () -> assertEquals(200, response.code()),
+            () -> {
+                assertNotNull(response.body());
+                assertFalse(response.body().isBlank());
+            }
         );
     }
 
@@ -129,13 +141,13 @@ public class RetrofitAvailabilityTests {
     @Test
     public void verifyIssuesContainTest() throws IOException {
         Issue issue = new Issue()
-                .setTitle(issueTitle)
-                .setBody(issueDescription);
+            .setTitle(issueTitle)
+            .setBody(issueDescription);
 
         Response<Issue> createResponse = gitHubServiceAuth.createIssuePojo(
-                owner,
-                repo,
-                issue
+            owner,
+            repo,
+            issue
         ).execute();
         assertEquals(201, createResponse.code());
         assertNotNull(createResponse.body());
@@ -148,16 +160,16 @@ public class RetrofitAvailabilityTests {
             assertNotNull(issueFound);
 
             assertAll(
-                    () -> assertEquals(issueNumber.intValue(), issueFound.getNumber()),
-                    () -> assertEquals(issue.getTitle(), issueFound.getTitle()),
-                    () -> assertEquals(issue.getBody(), issueFound.getBody()),
-                    () -> assertEquals("open", issueFound.getState()),
-                    () -> assertEquals(owner, issueFound.getUser().getLogin())
+                () -> assertEquals(issueNumber.intValue(), issueFound.getNumber()),
+                () -> assertEquals(issue.getTitle(), issueFound.getTitle()),
+                () -> assertEquals(issue.getBody(), issueFound.getBody()),
+                () -> assertEquals("open", issueFound.getState()),
+                () -> assertEquals(owner, issueFound.getUser().getLogin())
             );
         } finally {
             gitHubServiceAuth.updateIssueMap(
-                    owner, repo, issueNumber,
-                    Map.of("state", "closed")
+                owner, repo, issueNumber,
+                Map.of("state", "closed")
             ).execute();
         }
     }
@@ -167,23 +179,23 @@ public class RetrofitAvailabilityTests {
     */
     @Test
     public void verifyIssuesAuthorized() throws IOException {
-        Response<Repository> unauthResponse = gitHubServiceUnauth.getRepo(owner, repo).execute();
-        assertEquals(404, unauthResponse.code());
+        Response<Repository> unAuthResponse = gitHubServiceUnAuth.getRepo(owner, repo).execute();
+        assertEquals(404, unAuthResponse.code());
 
         Response<Repository> authResponse = gitHubServiceAuth.getRepo(owner, repo).execute();
         assertEquals(200, authResponse.code());
 
         Repository foundRepo = authResponse.body();
         assertAll(
-                () -> assertNotNull(foundRepo),
-                () -> {
-                    assertNotNull(foundRepo);
-                    assertEquals(repo, foundRepo.getName());
-                },
-                () -> {
-                    assertNotNull(foundRepo);
-                    assertNotNull(owner, foundRepo.getOwner().getLogin());
-                }
+            () -> assertNotNull(foundRepo),
+            () -> {
+                assertNotNull(foundRepo);
+                assertEquals(repo, foundRepo.getName());
+            },
+            () -> {
+                assertNotNull(foundRepo);
+                assertNotNull(owner, foundRepo.getOwner().getLogin());
+            }
         );
 
     }
@@ -193,24 +205,29 @@ public class RetrofitAvailabilityTests {
     */
     @Test
     public void verifyIssuesNoUserAgent() throws IOException {
-        OkHttpClient noAgentClient = new OkHttpClient.Builder()
-                .addNetworkInterceptor(chain -> chain.proceed(
-                        chain.request().newBuilder()
-                                .removeHeader("User-Agent")
-                                .build()
-                ))
-                .build();
-        Request request=new Request.Builder()
-                .url(baseUrl+"zen")
-                .build();
+        OkHttpClient noAgentClient = authClient.newBuilder()
+            .addNetworkInterceptor(chain -> chain.proceed(
+                chain.request().newBuilder()
+                    .removeHeader("User-Agent")
+                    .build()))
+            .build();
 
-        try (okhttp3.Response response = noAgentClient.newCall(request).execute()) {
-            String body = response.body() != null ? response.body().string() : "";
-            assertAll(
-                    () -> assertEquals(403, response.code()),
-                    () -> assertTrue(body.contains("User-Agent"))
-            );
-        }
+        Retrofit retrofitNoAgent = authRetrofit.newBuilder()
+            .client(noAgentClient)
+            .build();
+
+        GitHubService gitHubServiceNoAgent = retrofitNoAgent.create(GitHubService.class);
+
+        Response<String> response = gitHubServiceNoAgent
+            .getZen()
+            .execute();
+
+        String errorBody = response.errorBody() != null ? response.errorBody().string() : "";
+
+        assertAll(
+            () -> assertEquals(403, response.code()),
+            () -> assertTrue(errorBody.contains("User-Agent"))
+        );
     }
 
     /*
@@ -223,12 +240,12 @@ public class RetrofitAvailabilityTests {
             """.formatted(issueTitle, issueDescription);
 
         RequestBody body = RequestBody.create(
-                rawJson,
-                okhttp3.MediaType.parse("application/json; charset=utf-8"));
+            rawJson,
+            okhttp3.MediaType.parse("application/json; charset=utf-8"));
 
         Response<Issue> response = gitHubServiceAuth
-                .createIssueRawJson(owner, repo, body)
-                .execute();
+            .createIssueRawJson(owner, repo, body)
+            .execute();
 
         assertEquals(201, response.code());
         Issue created = response.body();
@@ -237,23 +254,23 @@ public class RetrofitAvailabilityTests {
 
         try {
             Response<Issue> getResponse = gitHubServiceAuth
-                    .getIssue(owner, repo, issueNumber.toString())
-                    .execute();
+                .getIssue(owner, repo, issueNumber.toString())
+                .execute();
             assertEquals(200, getResponse.code());
 
             Issue found = getResponse.body();
             assertNotNull(found);
 
             assertAll(
-                    () -> assertEquals(issueNumber.intValue(), found.getNumber()),
-                    () -> assertEquals(issueTitle, found.getTitle()),
-                    () -> assertEquals(issueDescription, found.getBody()),
-                    () -> assertEquals("open", found.getState())
+                () -> assertEquals(issueNumber.intValue(), found.getNumber()),
+                () -> assertEquals(issueTitle, found.getTitle()),
+                () -> assertEquals(issueDescription, found.getBody()),
+                () -> assertEquals("open", found.getState())
             );
         } finally {
             gitHubServiceAuth.updateIssueMap(
-                    owner, repo, issueNumber,
-                    Map.of("state", "closed")
+                owner, repo, issueNumber,
+                Map.of("state", "closed")
             ).execute();
         }
 
@@ -265,16 +282,16 @@ public class RetrofitAvailabilityTests {
     @Test
     public void verifyPostIssuesUrlParam() throws IOException {
         Response<ResponseBody> response = gitHubServiceAuth
-                .createIssueQuery(owner, repo, issueTitle, issueDescription)
-                .execute();
+            .createIssueQuery(owner, repo, issueTitle, issueDescription)
+            .execute();
 
         assertTrue(response.code() >= 400);
         assertNotNull(response.errorBody());
         String errorBody = response.errorBody().string();
 
         assertAll(
-                () -> assertEquals(422, response.code()),
-                () -> assertTrue(errorBody.contains("message"))
+            () -> assertEquals(422, response.code()),
+            () -> assertTrue(errorBody.contains("message"))
         );
     }
 
@@ -284,12 +301,12 @@ public class RetrofitAvailabilityTests {
     @Test
     public void verifyPostPojo() throws IOException {
         Issue issue = new Issue()
-                .setTitle(issueTitle)
-                .setBody(issueDescription);
+            .setTitle(issueTitle)
+            .setBody(issueDescription);
 
         Response<Issue> response = gitHubServiceAuth
-                .createIssuePojo(owner, repo, issue)
-                .execute();
+            .createIssuePojo(owner, repo, issue)
+            .execute();
 
         assertEquals(201, response.code());
         Issue created = response.body();
@@ -298,16 +315,16 @@ public class RetrofitAvailabilityTests {
 
         try {
             assertAll(
-                    () -> assertEquals(issueNumber.intValue(), created.getNumber()),
-                    () -> assertEquals(issueTitle, created.getTitle()),
-                    () -> assertEquals(issueDescription, created.getBody()),
-                    () -> assertEquals("open", created.getState()),
-                    () -> assertEquals(owner, created.getUser().getLogin())
+                () -> assertEquals(issueNumber.intValue(), created.getNumber()),
+                () -> assertEquals(issueTitle, created.getTitle()),
+                () -> assertEquals(issueDescription, created.getBody()),
+                () -> assertEquals("open", created.getState()),
+                () -> assertEquals(owner, created.getUser().getLogin())
             );
         } finally {
             gitHubServiceAuth.updateIssueMap(
-                    owner, repo, issueNumber,
-                    Map.of("state", "closed")
+                owner, repo, issueNumber,
+                Map.of("state", "closed")
             ).execute();
         }
     }
@@ -318,13 +335,13 @@ public class RetrofitAvailabilityTests {
     @Test
     public void verifyPostMap() throws IOException {
         Map<String, Object> requestBody = Map.of(
-                "title", issueTitle,
-                "body", issueDescription
+            "title", issueTitle,
+            "body", issueDescription
         );
 
         Response<Issue> response = gitHubServiceAuth
-                .createIssueMap(owner, repo, requestBody)
-                .execute();
+            .createIssueMap(owner, repo, requestBody)
+            .execute();
 
         assertEquals(201, response.code());
         Issue createdIssue = response.body();
@@ -334,14 +351,14 @@ public class RetrofitAvailabilityTests {
 
         try {
             assertAll(
-                    () -> assertEquals(issueTitle, createdIssue.getTitle()),
-                    () -> assertEquals(issueDescription, createdIssue.getBody()),
-                    () -> assertEquals("open", createdIssue.getState())
+                () -> assertEquals(issueTitle, createdIssue.getTitle()),
+                () -> assertEquals(issueDescription, createdIssue.getBody()),
+                () -> assertEquals("open", createdIssue.getState())
             );
         } finally {
             gitHubServiceAuth.updateIssueMap(
-                    owner, repo, issueNumber,
-                    Map.of("state", "closed")
+                owner, repo, issueNumber,
+                Map.of("state", "closed")
             ).execute();
         }
     }

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.TestInstance;
 
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.equalTo;
-import static org.nokhrin.github.config.Endpoints.REPO;
+import static org.nokhrin.github.config.GitHubEndpoints.REPO;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class RepoTest extends RestBaseTest {

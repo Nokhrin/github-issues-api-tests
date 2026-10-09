@@ -6,7 +6,7 @@ import org.junit.jupiter.api.TestInstance;
 
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.nokhrin.github.config.Endpoints.ISSUES;
+import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AccessTest extends RestBaseTest {

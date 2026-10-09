@@ -8,6 +8,8 @@ import io.restassured.specification.RequestSpecification;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
+import org.nokhrin.github.config.GitHubHeaders;
+import org.nokhrin.github.config.GitHubMediaTypes;
 import org.nokhrin.github.config.TestConfig;
 import org.nokhrin.github.model.Issue;
 import org.slf4j.Logger;
@@ -15,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-import static org.nokhrin.github.config.Endpoints.ISSUES;
+import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class RestBaseTest {
@@ -39,8 +41,8 @@ public abstract class RestBaseTest {
 
         baseSpec = new RequestSpecBuilder()
             .setBaseUri(baseUrl)
-            .addHeader("Accept", "application/vnd.github+json")
-            .addHeader("X-GitHub-Api-Version", "2026-03-10")
+            .addHeader("Accept", GitHubMediaTypes.JSON)
+            .addHeader("X-GitHub-Api-Version", GitHubHeaders.API_VERSION)
             .addHeader("User-Agent", owner)
             .build();
 

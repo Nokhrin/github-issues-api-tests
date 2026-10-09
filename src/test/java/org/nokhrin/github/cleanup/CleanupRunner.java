@@ -5,6 +5,8 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.LogConfig;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.TestInstance;
+import org.nokhrin.github.config.GitHubHeaders;
+import org.nokhrin.github.config.GitHubMediaTypes;
 import org.nokhrin.github.config.TestConfig;
 import org.nokhrin.github.utils.IssueUtils;
 import org.slf4j.Logger;
@@ -33,8 +35,8 @@ public class CleanupRunner {
 
         RequestSpecification baseSpec = new RequestSpecBuilder()
             .setBaseUri(baseUrl)
-            .addHeader("Accept", "application/vnd.github+json")
-            .addHeader("X-GitHub-Api-Version", "2026-03-10")
+            .addHeader("Accept", GitHubMediaTypes.JSON)
+            .addHeader("X-GitHub-Api-Version", GitHubHeaders.API_VERSION)
             .addHeader("User-Agent", owner)
             .build();
 

@@ -11,7 +11,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.nokhrin.github.config.Endpoints.GRAPHQL;
+import static org.nokhrin.github.config.GitHubEndpoints.GRAPHQL;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ZenTest extends GraphQLBaseTest {
