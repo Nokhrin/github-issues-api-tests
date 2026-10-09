@@ -111,6 +111,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire.version}</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -131,6 +136,7 @@
                     <reportVersion>${allure.version}</reportVersion>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 

@@ -32,9 +32,8 @@ curl -s https://raw.githubusercontent.com/github/rest-api-description/refs/heads
 touch .env
 chmod 600 .env
 # 2. Заполнить .env
-# 3. Загрузить переменные и запустить тесты
+# 3. Загрузить переменные
 set -a; source .env; set +a;
-mvn test
 ```
 
 ## Чистка окружения
@@ -42,10 +41,16 @@ mvn test
 Закрыть открытые issues
 
 ```shell
-mvn test -Dcleanup=true -Dtest=CleanupRunner
+mvn test-compile exec:java
 ```
 
 ## Отчетность
+Один тест с отчетом
+```shell
+mvn clean test allure:report -Dtest=org.nokhrin.github.graphql.IssueTest#verifyIssuesQueryReturnsValidIssues
+```
+
+
 ```shell
 # Запустить тесты и сгенерировать отчёт
 mvn clean test allure:report
