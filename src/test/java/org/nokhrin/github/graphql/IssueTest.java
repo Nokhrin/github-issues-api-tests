@@ -9,7 +9,7 @@ import java.util.Map;
 
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.nullValue;
-import static org.nokhrin.github.config.Endpoints.GRAPHQL;
+import static org.nokhrin.github.config.GitHubEndpoints.GRAPHQL;
 
 public class IssueTest extends GraphQLBaseTest {
 

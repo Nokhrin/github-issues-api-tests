@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import static org.nokhrin.github.config.Endpoints.ISSUES;
+import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
 
 public class IssueUtils {
     public static void closeOpenIssues(RequestSpecification spec) {
