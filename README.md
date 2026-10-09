@@ -36,10 +36,16 @@ chmod 600 .env
 set -a; source .env; set +a;
 ```
 
+## Выполнение тестов
+### По группам
+```shell
+mvn -B -ntp test -Dgroups=read
+```
+
+
 ## Чистка окружения
 
-Закрыть открытые issues
-
+### Закрыть открытые issues
 ```shell
 mvn test-compile exec:java
 ```
