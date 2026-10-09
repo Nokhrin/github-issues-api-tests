@@ -8,15 +8,26 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-
       - name: Set up JDK 25
         uses: actions/setup-java@v6
         with:
@@ -24,23 +35,40 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Run tests
+      - name: Run complete API test suite
+        if: github.event_name != 'pull_request'
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
           REPO_OWNER: ${{ vars.REPO_OWNER }}
           REPO_NAME: ${{ vars.REPO_NAME }}
           READ_AND_WRITE_TOKEN: ${{ secrets.READ_AND_WRITE_TOKEN }}
           READ_TOKEN: ${{ secrets.READ_TOKEN }}
-        run: mvn --batch-mode --no-transfer-progress test
+        run: mvn -B -ntp test
+
+      - name: Run read-only API tests
+        if: github.event_name == 'pull_request'
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          REPO_OWNER: ${{ vars.REPO_OWNER }}
+          REPO_NAME: ${{ vars.REPO_NAME }}
+          READ_AND_WRITE_TOKEN: ${{ secrets.READ_TOKEN }}
+          READ_TOKEN: ${{ secrets.READ_TOKEN }}
+        run: mvn -B -ntp test -Dgroups='!write'
 
       - name: Generate Allure Report
         if: always()
-        run: mvn allure:report
+        run: |
+          if [ -d target/allure-results ] && [ -n "$(ls -A target/allure-results)" ]; then
+            mvn -B -ntp allure:report
+          else
+            echo "Allure results not found"
+          fi
 
       - name: Upload Allure Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: allure-report
+          name: allure-report-${{ github.run_number }}
           path: target/site/allure-maven-plugin/
           retention-days: 7
+          if-no-files-found: warn
