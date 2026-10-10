@@ -4,7 +4,8 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import org.nokhrin.github.config.GitHubEndpoints;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.nokhrin.github.model.Issue;
 import org.nokhrin.github.rest.PaginationResult;
 
 import java.time.Duration;
@@ -14,6 +15,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
+import static org.nokhrin.github.config.GitHubEndpoints.ISSUE_BY_NUMBER;
 
 public class IssueUtils {
     public static void closeOpenIssues(RequestSpecification spec) {
@@ -47,7 +49,7 @@ public class IssueUtils {
             .spec(spec)
             .contentType(ContentType.JSON)
             .body(Map.of("state", "closed"))
-            .patch("/repos/{owner}/{repo}/issues/{number}", number)
+            .patch(ISSUE_BY_NUMBER, number)
             .then()
             .statusCode(200);
     }
@@ -94,7 +96,7 @@ public class IssueUtils {
                 int status = RestAssured.given()
                     .spec(spec)
                     .when()
-                    .get(GitHubEndpoints.ISSUE_BY_NUMBER, issueNumber)
+                    .get(ISSUE_BY_NUMBER, issueNumber)
                     .then()
                     .body("number", equalTo(issueNumber.intValue()))
                     .extract()
@@ -105,5 +107,50 @@ public class IssueUtils {
             Duration.ofSeconds(1),
             "issue #" + issueNumber + " is readable"
         );
+    }
+
+    public static Long createIssue(RequestSpecification spec, String title, String body) {
+        return createIssue(spec, new Issue().setTitle(title).setBody(body));
+    }
+
+    public static Long createIssue(RequestSpecification spec) {
+        return createIssue(spec, randomIssueTitle(), randomIssueDescription());
+    }
+
+    public static Long createIssue(RequestSpecification spec,
+                                   Object requestBody) {
+        return RestAssured.given()
+            .spec(spec)
+            .contentType(ContentType.JSON)
+            .body(requestBody)
+            .when()
+            .post(ISSUES)
+            .then()
+            .statusCode(201)
+            .log().ifValidationFails()
+            .extract()
+            .jsonPath().getLong("number");
+    }
+
+    public static void closeIssue(RequestSpecification spec, Long issueNum) {
+        if (issueNum == null) {
+            return;
+        }
+        RestAssured.given()
+            .spec(spec)
+            .contentType(ContentType.JSON)
+            .body(Map.of("state", "closed"))
+            .patch(ISSUE_BY_NUMBER, issueNum)
+            .then()
+            .statusCode(200)
+        ;
+    }
+
+    public static String randomIssueTitle() {
+        return "issue " + RandomStringUtils.randomAlphabetic(5);
+    }
+
+    public static String randomIssueDescription() {
+        return "Description of new issue";
     }
 }

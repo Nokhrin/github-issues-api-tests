@@ -31,7 +31,7 @@ public class RepoTest extends RestBaseTest {
             .body("owner.login", equalTo(config.githubOwner()))
             .body("private", equalTo(true))
             .body("default_branch", equalTo("main"))
-            .body(matchesJsonSchemaInClasspath("schemas/repository-schema.json"))
+            .body(matchesJsonSchemaInClasspath("schemas/rest/repository.schema.json"))
             .log().ifValidationFails()
         ;
     }
@@ -40,7 +40,7 @@ public class RepoTest extends RestBaseTest {
     @Tag("read")
     public void requestAuthResponseContainsField() {
         RestAssured.given()
-            .spec(unAuthSpec)
+            .spec(baseSpec)
             .when()
             .get(REPO)
             .then()
@@ -79,7 +79,7 @@ public class RepoTest extends RestBaseTest {
             .get(REPO)
             .then()
             .statusCode(200)
-            .body(matchesJsonSchemaInClasspath("schemas/repository-schema.json"))
+            .body(matchesJsonSchemaInClasspath("schemas/rest/repository.schema.json"))
             .log().all()
         ;
     }

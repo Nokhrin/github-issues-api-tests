@@ -1,36 +1,22 @@
 package org.nokhrin.github.rest;
 
 import io.restassured.RestAssured;
-import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.LogConfig;
-import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
-import org.nokhrin.github.config.GitHubHeaders;
-import org.nokhrin.github.config.GitHubMediaTypes;
+import org.nokhrin.github.config.Spec;
 import org.nokhrin.github.config.TestConfig;
-import org.nokhrin.github.model.Issue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-
-import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class RestBaseTest {
-    protected final Logger LOGGER = LoggerFactory.getLogger(RestBaseTest.class);
-
     protected String baseUrl, owner, repo;
     protected TestConfig config;
-    protected RequestSpecification baseSpec, unAuthSpec, rwAuthSpec, roAuthSpec;
+    protected RequestSpecification baseSpec, rwAuthSpec, roAuthSpec;
 
     @BeforeAll
     void setUp() {
         config = TestConfig.fromEnv();
-        LOGGER.debug("Загружена конфигурация: " + config);
 
         baseUrl = config.githubBaseUrl();
         owner = config.githubOwner();
@@ -39,77 +25,19 @@ public abstract class RestBaseTest {
         RestAssured.config = RestAssured.config()
             .logConfig(LogConfig.logConfig().blacklistHeader("Authorization"));
 
-        baseSpec = new RequestSpecBuilder()
-            .setBaseUri(baseUrl)
-            .addHeader("Accept", GitHubMediaTypes.JSON)
-            .addHeader("X-GitHub-Api-Version", GitHubHeaders.API_VERSION)
-            .addHeader("User-Agent", owner)
-            .build();
+        baseSpec = Spec.base(config);
+        rwAuthSpec = Spec.withOwnerAndRepo(
+            Spec.withAuth(baseSpec, config.readAndWriteToken()),
+            owner,
+            repo
+        );
 
-        unAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", owner)
-            .addPathParam("repo", repo)
-            .build();
+        roAuthSpec = Spec.withOwnerAndRepo(
+            Spec.withAuth(baseSpec, config.readToken()),
+            owner,
+            repo
+        );
 
-        rwAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", owner)
-            .addPathParam("repo", repo)
-            .addHeader("Authorization", "Bearer " + config.readAndWriteToken())
-            .build();
-
-        roAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", owner)
-            .addPathParam("repo", repo)
-            .addHeader("Authorization", "Bearer " + config.readToken())
-            .build();
-
-    }
-
-    protected final Long createIssue(String title, String body) {
-        return createIssue(new Issue().setTitle(title).setBody(body));
-    }
-
-    protected final Long createIssue() {
-        return createIssue(randomIssueTitle(), randomIssueDescription());
-    }
-
-    protected final Long createIssue(Object requestBody) {
-        return RestAssured.given()
-            .spec(rwAuthSpec)
-            .contentType(ContentType.JSON)
-            .body(requestBody)
-            .when()
-            .post(ISSUES)
-            .then()
-            .statusCode(201)
-            .log().ifValidationFails()
-            .extract()
-            .jsonPath().getLong("number");
-    }
-
-    protected final void closeIssue(Long issueNum) {
-        if (issueNum == null) {
-            return;
-        }
-        RestAssured.given()
-            .spec(rwAuthSpec)
-            .contentType(ContentType.JSON)
-            .body(Map.of("state", "closed"))
-            .patch("/repos/{owner}/{repo}/issues/{number}", issueNum)
-            .then()
-            .statusCode(200)
-        ;
-    }
-
-    protected final String randomIssueTitle() {
-        return "issue " + RandomStringUtils.randomAlphabetic(5);
-    }
-
-    protected final String randomIssueDescription() {
-        return "Description of new issue";
     }
 
 }

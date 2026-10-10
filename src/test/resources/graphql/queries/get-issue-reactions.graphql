@@ -1,0 +1,17 @@
+query GetIssueReactions($owner: String!, $name: String!, $issueNumber: Int!) {
+    repository(owner: $owner, name: $name) {
+        issue(number: $issueNumber) {
+            __typename
+            id
+            number
+            title
+            reactionGroups {
+                content
+                reactors {
+                    totalCount
+                }
+                viewerHasReacted
+            }
+        }
+    }
+}

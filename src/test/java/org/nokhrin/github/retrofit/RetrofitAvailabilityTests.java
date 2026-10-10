@@ -10,7 +10,7 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.*;
 import org.nokhrin.github.config.GitHubMediaTypes;
-import org.nokhrin.github.config.HttpClientFactory;
+import org.nokhrin.github.config.HttpClient;
 import org.nokhrin.github.config.TestConfig;
 import org.nokhrin.github.model.Issue;
 import org.nokhrin.github.model.Repository;
@@ -77,8 +77,8 @@ public class RetrofitAvailabilityTests {
                 .build()
         );
 
-        OkHttpClient unAuthClient = HttpClientFactory.create(baseHeaders, loggingInterceptor);
-        authClient = HttpClientFactory.create(authHeaders, loggingInterceptor);
+        OkHttpClient unAuthClient = HttpClient.create(baseHeaders, loggingInterceptor);
+        authClient = HttpClient.create(authHeaders, loggingInterceptor);
 
         ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -103,7 +103,7 @@ public class RetrofitAvailabilityTests {
 
     @AfterAll
     void tearDown() {
-        HttpClientFactory.shutdown();
+        HttpClient.shutdown();
     }
 
     /*

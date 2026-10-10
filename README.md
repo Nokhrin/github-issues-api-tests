@@ -18,10 +18,7 @@ READ_TOKEN - сценарии "ошибка доступа" при измене�
 
 [Спецификация OpenAPI](https://raw.githubusercontent.com/github/rest-api-description/refs/heads/main/descriptions/api.github.com/api.github.com.json)
 
-Поиск в спецификации
-```shell
-curl -s https://raw.githubusercontent.com/github/rest-api-description/refs/heads/main/descriptions/api.github.com/api.github.com.json | jq '.paths["/repos/{owner}/{repo}/issues"].post.requestBody.content."application/json".schema'
-```
+[JSON схема запроса GitHub GraphQL](https://docs.github.com/public/fpt/schema.docs.graphql)
 
 # Разработка
 
