@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
 import static org.nokhrin.github.config.GitHubHeaders.API_VERSION;
 import static org.nokhrin.github.config.GitHubMediaTypes.JSON;
-import static org.nokhrin.github.utils.IssueUtils.closeOpenIssues;
+import static org.nokhrin.github.utils.IssueUtils.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class IssueTest extends RestBaseTest {
@@ -54,7 +54,7 @@ public class IssueTest extends RestBaseTest {
             {"title": "%s", "body": "%s"}
             """.formatted(issueTitle, issueDescription);
 
-        Long issueNum = createIssue(requestBody);
+        Long issueNum = createIssue(rwAuthSpec, requestBody);
         RestAssured.given()
             .spec(rwAuthSpec)
             .when()
@@ -64,7 +64,7 @@ public class IssueTest extends RestBaseTest {
             .log().ifValidationFails()
             .body("title", equalTo(issueTitle))
             .body("body", equalTo(issueDescription))
-            .body(matchesJsonSchemaInClasspath("schemas/issue-schema.json"))
+            .body(matchesJsonSchemaInClasspath("schemas/rest/issue.schema.json"))
         ;
 
     }
@@ -72,7 +72,7 @@ public class IssueTest extends RestBaseTest {
     @Test
     @Tag("read")
     public void verifyPostPojo() {
-        Long issueNum = createIssue(randomIssueTitle(), randomIssueDescription());
+        Long issueNum = createIssue(rwAuthSpec, randomIssueTitle(), randomIssueDescription());
         RestAssured.given()
             .spec(rwAuthSpec)
             .when()
@@ -91,8 +91,7 @@ public class IssueTest extends RestBaseTest {
             "title", randomIssueTitle(),
             "body", randomIssueDescription()
         );
-        Long number = null;
-        number = RestAssured.given()
+        Long number = RestAssured.given()
             .spec(rwAuthSpec)
             .contentType(ContentType.JSON)
             .body(requestBody)
@@ -119,7 +118,7 @@ public class IssueTest extends RestBaseTest {
     @Test
     @Tag("read")
     public void verifyPostPojoWithJsonPath() {
-        Long issueNum = createIssue(randomIssueTitle(), randomIssueDescription());
+        Long issueNum = createIssue(rwAuthSpec, randomIssueTitle(), randomIssueDescription());
         Issue issue = RestAssured.given()
             .spec(rwAuthSpec)
             .when()
@@ -192,7 +191,7 @@ public class IssueTest extends RestBaseTest {
     void createCloseStateVerified() {
         String issueTitle = randomIssueTitle();
         String issueDescription = randomIssueDescription();
-        Long issueNumber = createIssue(issueTitle, issueDescription);
+        Long issueNumber = createIssue(rwAuthSpec, issueTitle, issueDescription);
 
         RestAssured.given()
             .spec(rwAuthSpec)
@@ -421,7 +420,7 @@ public class IssueTest extends RestBaseTest {
     @Test
     @Tag("write")
     void verifyFilterByState_openedIssueReturned() {
-        Long openedIssueNumber = createIssue();
+        Long openedIssueNumber = createIssue(rwAuthSpec);
 
         WaitUtil.waitFor(
             () -> {
@@ -459,8 +458,8 @@ public class IssueTest extends RestBaseTest {
     @Test
     @Tag("write")
     void verifyFilterByState_closedIssueReturned() {
-        Long closedIssueNumber = createIssue();
-        closeIssue(closedIssueNumber);
+        Long closedIssueNumber = createIssue(rwAuthSpec);
+        closeIssue(rwAuthSpec, closedIssueNumber);
 
         WaitUtil.waitFor(
             () -> {
@@ -497,9 +496,9 @@ public class IssueTest extends RestBaseTest {
     @Test
     @Tag("write")
     void verifyFilterByState_all() {
-        Long openedIssueNumber = createIssue();
-        Long closedIssueNumber = createIssue();
-        closeIssue(closedIssueNumber);
+        Long openedIssueNumber = createIssue(rwAuthSpec);
+        Long closedIssueNumber = createIssue(rwAuthSpec);
+        closeIssue(rwAuthSpec, closedIssueNumber);
 
         WaitUtil.waitFor(
             () -> {
@@ -541,7 +540,7 @@ public class IssueTest extends RestBaseTest {
 
         List<Long> created = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
-            Long number = createIssue();
+            Long number = createIssue(rwAuthSpec);
             created.add(number);
             IssueUtils.waitIssueReadable(rwAuthSpec, number);
         }
@@ -736,7 +735,7 @@ public class IssueTest extends RestBaseTest {
     @Test
     @Tag("write")
     void issueResponseMatchesIssueSchema() {
-        Long issueNumber = createIssue();
+        Long issueNumber = createIssue(rwAuthSpec);
         RestAssured.given()
             .spec(rwAuthSpec)
             .accept(ContentType.JSON)
@@ -745,6 +744,6 @@ public class IssueTest extends RestBaseTest {
             .then()
             .statusCode(200)
             .log().all()
-            .body(matchesJsonSchemaInClasspath("schemas/issue-schema.json"));
+            .body(matchesJsonSchemaInClasspath("schemas/rest/issue.schema.json"));
     }
 }

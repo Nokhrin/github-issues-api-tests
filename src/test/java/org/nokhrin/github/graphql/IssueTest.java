@@ -16,8 +16,8 @@ public class IssueTest extends GraphQLBaseTest {
 
     @Test
     @Tag("read")
-    public void verifyIssuesQueryReturnsValidIssues() {
-        String query = ReadResource.readResource("graphql/get-issues.graphql");
+    void issuesQueryReturnsValidIssues() {
+        String query = ReadResource.readResource("graphql/queries/get-issues-list.graphql");
 
         Map<String, Object> variables = Map.of(
             "owner", config.githubOwner(),
@@ -40,7 +40,7 @@ public class IssueTest extends GraphQLBaseTest {
             .log().all()
             .body("errors", nullValue())
             .body(matchesJsonSchemaInClasspath(
-                "schemas/get-issues-response.json"
+                "schemas/graphql/get-issues-response.schema.json"
             ))
         ;
     }

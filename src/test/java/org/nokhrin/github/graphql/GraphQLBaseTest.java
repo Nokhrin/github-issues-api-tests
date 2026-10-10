@@ -1,29 +1,24 @@
 package org.nokhrin.github.graphql;
 
 import io.restassured.RestAssured;
-import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.LogConfig;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
-import org.nokhrin.github.config.GitHubHeaders;
-import org.nokhrin.github.config.GitHubMediaTypes;
+import org.nokhrin.github.config.Spec;
 import org.nokhrin.github.config.TestConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class GraphQLBaseTest {
-    protected final Logger LOGGER = LoggerFactory.getLogger(GraphQLBaseTest.class);
-
     protected String baseUrl, owner, repo;
     protected TestConfig config;
-    protected RequestSpecification baseSpec, unAuthSpec, rwAuthSpec, roAuthSpec;
+    protected RequestSpecification baseSpec, rwAuthSpec, roAuthSpec;
 
     @BeforeAll
     void setUp() {
         config = TestConfig.fromEnv();
-        LOGGER.debug("Загружена конфигурация: " + config);
 
         baseUrl = config.githubBaseUrl();
         owner = config.githubOwner();
@@ -32,26 +27,10 @@ public abstract class GraphQLBaseTest {
         RestAssured.config = RestAssured.config()
             .logConfig(LogConfig.logConfig().blacklistHeader("Authorization"));
 
-        baseSpec = new RequestSpecBuilder()
-            .setBaseUri(baseUrl)
-            .addHeader("Accept", GitHubMediaTypes.JSON)
-            .addHeader("X-GitHub-Api-Version", GitHubHeaders.API_VERSION)
-            .addHeader("User-Agent", owner)
-            .build();
+        baseSpec = Spec.base(config);
 
-        unAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .build();
+        rwAuthSpec = Spec.withAuth(baseSpec, config.readAndWriteToken());
 
-        rwAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addHeader("Authorization", "Bearer " + config.readAndWriteToken())
-            .build();
-
-        roAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addHeader("Authorization", "Bearer " + config.readToken())
-            .build();
-
+        roAuthSpec = Spec.withAuth(baseSpec, config.readToken());
     }
 }

@@ -1,0 +1,24 @@
+query GetIssuesInState(
+    $owner: String!
+    $name: String!
+    $states: [IssueState!]!
+    $first: Int!
+    $after: String
+) {
+    repository(owner: $owner, name: $name) {
+        issues(first: $first, after: $after, states: $states, orderBy: {field: CREATED_AT, direction: DESC}) {
+            totalCount
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
+            nodes {
+                __typename
+                number
+                title
+                state
+                createdAt
+            }
+        }
+    }
+}

@@ -6,11 +6,11 @@ import okhttp3.OkHttpClient;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public final class HttpClientFactory {
+public final class HttpClient {
 
     private static final OkHttpClient BASE_CLIENT = new OkHttpClient.Builder().build();
 
-    private HttpClientFactory() {
+    private HttpClient() {
     }
 
     public static OkHttpClient create(Interceptor... interceptors) {

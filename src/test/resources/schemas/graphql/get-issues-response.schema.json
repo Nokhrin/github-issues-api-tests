@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "data"
+  ],
+  "properties": {
+    "data": {
+      "type": "object",
+      "required": [
+        "repository"
+      ],
+      "properties": {
+        "repository": {
+          "type": "object",
+          "required": [
+            "issues"
+          ],
+          "properties": {
+            "issues": {
+              "type": "object",
+              "required": [
+                "nodes",
+                "pageInfo"
+              ],
+              "properties": {
+                "nodes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "number",
+                      "title",
+                      "state"
+                    ],
+                    "properties": {
+                      "number": {
+                        "type": "integer"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "OPEN",
+                          "CLOSED"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "pageInfo": {
+                  "type": "object",
+                  "required": [
+                    "hasNextPage",
+                    "endCursor"
+                  ],
+                  "properties": {
+                    "hasNextPage": {
+                      "type": "boolean"
+                    },
+                    "endCursor": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

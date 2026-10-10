@@ -20,7 +20,7 @@ public class ZenTest extends GraphQLBaseTest {
     @Test
     @Tag("read")
     public void verify_GraphQLendPointAvailable_tokenValid_gqlRequestValid() {
-        String query = ReadResource.readResource("graphql/healthcheck.graphql");
+        String query = ReadResource.readResource("graphql/queries/healthcheck.graphql");
 
         Response response = RestAssured.given()
             .spec(roAuthSpec)
