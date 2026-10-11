@@ -1,4 +1,4 @@
-package org.nokhrin.github.config;
+package org.nokhrin.github.utils;
 
 import org.jetbrains.annotations.NotNull;
 

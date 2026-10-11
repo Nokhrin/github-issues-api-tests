@@ -1,14 +1,12 @@
 package org.nokhrin.github.cleanup;
 
 import io.restassured.RestAssured;
-import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.LogConfig;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.TestInstance;
-import org.nokhrin.github.config.GitHubHeaders;
-import org.nokhrin.github.config.GitHubMediaTypes;
-import org.nokhrin.github.config.TestConfig;
-import org.nokhrin.github.utils.IssueUtils;
+import org.nokhrin.github.utils.IssuesRest;
+import org.nokhrin.github.utils.Spec;
+import org.nokhrin.github.utils.TestConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +20,7 @@ public class CleanupRunner {
 
 
     static void main() {
-        LOGGER.debug("Clean");
+        LOGGER.debug("Close opened issues: started");
         config = TestConfig.fromEnv();
 
         baseUrl = config.githubBaseUrl();
@@ -33,21 +31,14 @@ public class CleanupRunner {
         RestAssured.config = RestAssured.config()
             .logConfig(LogConfig.logConfig().blacklistHeader("Authorization"));
 
-        RequestSpecification baseSpec = new RequestSpecBuilder()
-            .setBaseUri(baseUrl)
-            .addHeader("Accept", GitHubMediaTypes.JSON)
-            .addHeader("X-GitHub-Api-Version", GitHubHeaders.API_VERSION)
-            .addHeader("User-Agent", owner)
-            .build();
-
-        rwAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", config.githubOwner())
-            .addPathParam("repo", config.githubRepo())
-            .addHeader("Authorization", "Bearer " + config.readAndWriteToken())
-            .build();
+        rwAuthSpec =
+            Spec.withAuth(
+                Spec.withOwnerAndRepo(Spec.base(config), owner, repo),
+                config.readAndWriteToken()
+            );
 
 
-        IssueUtils.closeOpenIssues(rwAuthSpec);
+        IssuesRest.closeOpenIssues(rwAuthSpec);
+        LOGGER.debug("Close opened issues: completed");
     }
 }

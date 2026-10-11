@@ -1,8 +1,16 @@
 query GetIssues($owner: String!, $name: String!, $limit: Int!) {
     repository(owner: $owner, name: $name) {
         issues(first: $limit, orderBy: {field: CREATED_AT, direction: DESC}) {
-            nodes { number title state }
-            pageInfo { hasNextPage endCursor }
+            nodes {
+                number
+                title
+                state
+                createdAt
+            }
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
         }
     }
 }

@@ -34,9 +34,9 @@ set -a; source .env; set +a;
 ```
 
 ## Выполнение тестов
-### По группам
+### По тегам JUnit
 ```shell
-mvn -B -ntp test -Dgroups=read
+mvn clean -ntp test -Dgroups=read
 ```
 
 
@@ -44,7 +44,7 @@ mvn -B -ntp test -Dgroups=read
 
 ### Закрыть открытые issues
 ```shell
-mvn test-compile exec:java
+mvn clean -B -ntp test-compile exec:java
 ```
 
 ## Отчетность

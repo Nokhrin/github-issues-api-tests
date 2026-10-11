@@ -15,8 +15,6 @@ import static org.nokhrin.github.config.GitHubEndpoints.REPO;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class RepoTest extends RestBaseTest {
 
-    @Feature("GitHub Issues API")
-    @Severity(SeverityLevel.CRITICAL)
     @Test
     @Tag("read")
     public void verifyIssuesContainsFields() {
@@ -31,7 +29,7 @@ public class RepoTest extends RestBaseTest {
             .body("owner.login", equalTo(config.githubOwner()))
             .body("private", equalTo(true))
             .body("default_branch", equalTo("main"))
-            .body(matchesJsonSchemaInClasspath("schemas/rest/repository.schema.json"))
+            .body(matchesJsonSchemaInClasspath("schemas/rest/repository.json"))
             .log().ifValidationFails()
         ;
     }
@@ -40,7 +38,7 @@ public class RepoTest extends RestBaseTest {
     @Tag("read")
     public void requestAuthResponseContainsField() {
         RestAssured.given()
-            .spec(baseSpec)
+            .spec(unAuthSpec)
             .when()
             .get(REPO)
             .then()
@@ -79,7 +77,7 @@ public class RepoTest extends RestBaseTest {
             .get(REPO)
             .then()
             .statusCode(200)
-            .body(matchesJsonSchemaInClasspath("schemas/rest/repository.schema.json"))
+            .body(matchesJsonSchemaInClasspath("schemas/rest/repository.json"))
             .log().all()
         ;
     }

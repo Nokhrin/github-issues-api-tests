@@ -1,4 +1,4 @@
 schema: ./src/test/resources/schemas/github-api.schema.graphql
 
 documents:
-  - ./src/test/resources/graphql/operations/**/*.graphql
+  - ./src/test/resources/graphql/**/*.graphql
