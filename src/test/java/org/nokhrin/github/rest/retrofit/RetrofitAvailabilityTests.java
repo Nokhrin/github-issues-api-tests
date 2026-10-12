@@ -1,4 +1,4 @@
-package org.nokhrin.github.retrofit;
+package org.nokhrin.github.rest.retrofit;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,14 +7,13 @@ import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.*;
 import org.nokhrin.github.config.GitHubMediaTypes;
-import org.nokhrin.github.config.HttpClientFactory;
-import org.nokhrin.github.config.TestConfig;
+import org.nokhrin.github.config.HttpClient;
 import org.nokhrin.github.model.Issue;
 import org.nokhrin.github.model.Repository;
 import org.nokhrin.github.service.GitHubService;
+import org.nokhrin.github.utils.TestConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.Response;
@@ -24,6 +23,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,7 +37,7 @@ public class RetrofitAvailabilityTests {
     private static GitHubService gitHubServiceAuth;
     private static GitHubService gitHubServiceUnAuth;
 
-    private String issueTitle = String.format("issue %s", RandomStringUtils.randomAlphabetic(5));
+    private String issueTitle = "issue " + UUID.randomUUID();
     private String issueDescription = "Description of new issue";
 
     private TestConfig config;
@@ -77,8 +77,8 @@ public class RetrofitAvailabilityTests {
                 .build()
         );
 
-        OkHttpClient unAuthClient = HttpClientFactory.create(baseHeaders, loggingInterceptor);
-        authClient = HttpClientFactory.create(authHeaders, loggingInterceptor);
+        OkHttpClient unAuthClient = HttpClient.create(baseHeaders, loggingInterceptor);
+        authClient = HttpClient.create(authHeaders, loggingInterceptor);
 
         ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -103,7 +103,7 @@ public class RetrofitAvailabilityTests {
 
     @AfterAll
     void tearDown() {
-        HttpClientFactory.shutdown();
+        HttpClient.shutdown();
     }
 
     /*
@@ -236,7 +236,7 @@ public class RetrofitAvailabilityTests {
         06. Проверяем, что ишью публикуется
     */
     @Test
-    @Tag("read")
+    @Tag("write")
     public void verifyPostIssues() throws IOException {
         String rawJson = """
             {"title": "%s", "body": "%s"}
@@ -283,7 +283,7 @@ public class RetrofitAvailabilityTests {
         07. Проверяем, что тело ответа содержит ошибку и 403 код
     */
     @Test
-    @Tag("read")
+    @Tag("write")
     public void verifyPostIssuesUrlParam() throws IOException {
         Response<ResponseBody> response = gitHubServiceAuth
             .createIssueQuery(owner, repo, issueTitle, issueDescription)
@@ -303,7 +303,7 @@ public class RetrofitAvailabilityTests {
         08. Проверяем, что ишью публикуется (тело запроса в POJO)
     */
     @Test
-    @Tag("read")
+    @Tag("write")
     public void verifyPostPojo() throws IOException {
         Issue issue = new Issue()
             .setTitle(issueTitle)
@@ -338,7 +338,7 @@ public class RetrofitAvailabilityTests {
         09. Проверяем, что ишью публикуется (тело запроса в Map)
     */
     @Test
-    @Tag("read")
+    @Tag("write")
     public void verifyPostMap() throws IOException {
         Map<String, Object> requestBody = Map.of(
             "title", issueTitle,

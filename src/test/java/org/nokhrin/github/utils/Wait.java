@@ -6,10 +6,10 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-public class WaitUtil {
-    private static final Logger LOGGER = LoggerFactory.getLogger(WaitUtil.class);
+public class Wait {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Wait.class);
 
-    public static <T> T waitFor(
+    public static <T> T forCondition(
         Supplier<T> condition,
         Duration timeout,
         Duration interval,
@@ -30,8 +30,10 @@ public class WaitUtil {
                 Thread.sleep(intervalMs);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException(
-                    String.format("Polling interrupted  after %s while waiting for: %s\nError: %s", timeoutMs, description, e));
+                throw new RuntimeException("""
+                    Polling interrupted after %s while waiting for: %s
+                    Error: %s
+                    """.formatted(timeoutMs, description, e));
             }
             LOGGER.debug("Condition is not met, try again");
             tryCount++;

@@ -5,3 +5,4 @@ target/
 .env*
 !.env.example
 .allure/
+github-api.schema.graphql

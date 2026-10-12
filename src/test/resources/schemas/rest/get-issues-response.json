@@ -1,0 +1,319 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitHub Issue",
+  "type": "object",
+
+  "required": [
+    "assignee",
+    "closed_at",
+    "comments",
+    "comments_url",
+    "events_url",
+    "html_url",
+    "id",
+    "node_id",
+    "labels",
+    "labels_url",
+    "milestone",
+    "number",
+    "repository_url",
+    "state",
+    "locked",
+    "title",
+    "url",
+    "user",
+    "created_at",
+    "updated_at"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "repository_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "labels_url": {
+      "type": "string"
+    },
+    "comments_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "events_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "html_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "number": {
+      "type": "integer"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ]
+    },
+    "state_reason": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "completed",
+            "reopened",
+            "not_planned",
+            "duplicate"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "user": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/definitions/label"
+          }
+        ]
+      }
+    },
+    "assignee": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "assignees": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/simpleObject"
+      }
+    },
+    "milestone": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "locked": {
+      "type": "boolean"
+    },
+    "active_lock_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "comments": {
+      "type": "integer"
+    },
+    "pull_request": {
+      "type": "object",
+      "required": [
+        "diff_url",
+        "html_url",
+        "patch_url",
+        "url"
+      ],
+      "properties": {
+        "merged_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diff_url": {
+          "$ref": "#/definitions/nullableUri"
+        },
+        "html_url": {
+          "$ref": "#/definitions/nullableUri"
+        },
+        "patch_url": {
+          "$ref": "#/definitions/nullableUri"
+        },
+        "url": {
+          "$ref": "#/definitions/nullableUri"
+        }
+      }
+    },
+    "closed_at": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "draft": {
+      "type": "boolean"
+    },
+    "closed_by": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "body_html": {
+      "type": "string"
+    },
+    "body_text": {
+      "type": "string"
+    },
+    "timeline_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "type": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "repository": {
+      "$ref": "#/definitions/simpleObject"
+    },
+    "performed_via_github_app": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "author_association": {
+      "type": "string"
+    },
+    "reactions": {
+      "$ref": "#/definitions/simpleObject"
+    },
+    "sub_issues_summary": {
+      "$ref": "#/definitions/simpleObject"
+    },
+    "parent_issue_url": {
+      "$ref": "#/definitions/nullableUri"
+    },
+    "pinned_comment": {
+      "$ref": "#/definitions/nullableObject"
+    },
+    "issue_dependencies_summary": {
+      "$ref": "#/definitions/simpleObject"
+    },
+    "issue_field_values": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/simpleObject"
+      }
+    }
+  },
+
+  "definitions": {
+    "nullableObject": {
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+
+    "simpleObject": {
+      "type": "object"
+    },
+
+    "nullableUri": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+
+    "label": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default": {
+          "type": "boolean"
+        },
+        "archived_by": {
+          "$ref": "#/definitions/nullableObject"
+        }
+      }
+    }
+  }
+}

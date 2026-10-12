@@ -1,28 +1,23 @@
 package org.nokhrin.github.rest;
 
 import io.restassured.RestAssured;
-import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.LogConfig;
-import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
-import org.nokhrin.github.config.GitHubHeaders;
-import org.nokhrin.github.config.GitHubMediaTypes;
-import org.nokhrin.github.config.TestConfig;
-import org.nokhrin.github.model.Issue;
+import org.nokhrin.github.utils.IssuesRest;
+import org.nokhrin.github.utils.Spec;
+import org.nokhrin.github.utils.TestConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-
-import static org.nokhrin.github.config.GitHubEndpoints.ISSUES;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class RestBaseTest {
-    protected final Logger LOGGER = LoggerFactory.getLogger(RestBaseTest.class);
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestBaseTest.class);
     protected String baseUrl, owner, repo;
     protected TestConfig config;
     protected RequestSpecification baseSpec, unAuthSpec, rwAuthSpec, roAuthSpec;
@@ -30,7 +25,6 @@ public abstract class RestBaseTest {
     @BeforeAll
     void setUp() {
         config = TestConfig.fromEnv();
-        LOGGER.debug("Загружена конфигурация: " + config);
 
         baseUrl = config.githubBaseUrl();
         owner = config.githubOwner();
@@ -39,77 +33,47 @@ public abstract class RestBaseTest {
         RestAssured.config = RestAssured.config()
             .logConfig(LogConfig.logConfig().blacklistHeader("Authorization"));
 
-        baseSpec = new RequestSpecBuilder()
-            .setBaseUri(baseUrl)
-            .addHeader("Accept", GitHubMediaTypes.JSON)
-            .addHeader("X-GitHub-Api-Version", GitHubHeaders.API_VERSION)
-            .addHeader("User-Agent", owner)
-            .build();
+        baseSpec = Spec.base(config);
 
-        unAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", owner)
-            .addPathParam("repo", repo)
-            .build();
+        unAuthSpec = Spec.withOwnerAndRepo(
+            baseSpec,
+            owner,
+            repo
+        );
 
-        rwAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", owner)
-            .addPathParam("repo", repo)
-            .addHeader("Authorization", "Bearer " + config.readAndWriteToken())
-            .build();
+        rwAuthSpec = Spec.withOwnerAndRepo(
+            Spec.withAuth(baseSpec, config.readAndWriteToken()),
+            owner,
+            repo
+        );
 
-        roAuthSpec = new RequestSpecBuilder()
-            .addRequestSpecification(baseSpec)
-            .addPathParam("owner", owner)
-            .addPathParam("repo", repo)
-            .addHeader("Authorization", "Bearer " + config.readToken())
-            .build();
+        roAuthSpec = Spec.withOwnerAndRepo(
+            Spec.withAuth(baseSpec, config.readToken()),
+            owner,
+            repo
+        );
 
     }
 
-    protected final Long createIssue(String title, String body) {
-        return createIssue(new Issue().setTitle(title).setBody(body));
+    private final Set<Long> createdIssueNumbers = ConcurrentHashMap.newKeySet();
+
+    protected Long createTestIssue(String title, String body) {
+        Long number = IssuesRest.createIssue(rwAuthSpec, title, body);
+        createdIssueNumbers.add(number);
+        return number;
     }
 
-    protected final Long createIssue() {
-        return createIssue(randomIssueTitle(), randomIssueDescription());
-    }
-
-    protected final Long createIssue(Object requestBody) {
-        return RestAssured.given()
-            .spec(rwAuthSpec)
-            .contentType(ContentType.JSON)
-            .body(requestBody)
-            .when()
-            .post(ISSUES)
-            .then()
-            .statusCode(201)
-            .log().ifValidationFails()
-            .extract()
-            .jsonPath().getLong("number");
-    }
-
-    protected final void closeIssue(Long issueNum) {
-        if (issueNum == null) {
-            return;
+    @AfterEach
+    void closeCreatedTestIssues() {
+        for (Long number : createdIssueNumbers) {
+            try {
+                IssuesRest.closeIssueQuietly(rwAuthSpec, number);
+            } catch (RuntimeException e) {
+                LOGGER.warn("Cleanup failed for issue {}", number, e);
+            }
         }
-        RestAssured.given()
-            .spec(rwAuthSpec)
-            .contentType(ContentType.JSON)
-            .body(Map.of("state", "closed"))
-            .patch("/repos/{owner}/{repo}/issues/{number}", issueNum)
-            .then()
-            .statusCode(200)
-        ;
-    }
 
-    protected final String randomIssueTitle() {
-        return "issue " + RandomStringUtils.randomAlphabetic(5);
-    }
-
-    protected final String randomIssueDescription() {
-        return "Description of new issue";
+        createdIssueNumbers.clear();
     }
 
 }

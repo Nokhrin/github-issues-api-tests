@@ -1,4 +1,4 @@
-package org.nokhrin.github.rest;
+package org.nokhrin.github.model;
 
 import java.util.List;
 
