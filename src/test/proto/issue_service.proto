@@ -1,0 +1,30 @@
+syntax="proto3";
+package github_issues;
+option java_package="org.nokhrin.github.grpc.generated";
+option java_multiple_files=true;
+service IssueService{
+    rpc GetIssue(GetIssueRequest) returns (Issue);
+    rpc CreateIssue(CreateIssueRequest) returns (Issue);
+    rpc CloseIssue(CloseIssueRequest) returns (Issue);
+    rpc ListIssues(ListIssuesRequest) returns (stream Issue);
+}
+
+message Issue{
+    int64 number=1;
+    string title=2;
+    string body=3;
+    string state=4;
+}
+message GetIssueRequest{
+    int64 number=1;
+}
+message CreateIssueRequest{
+    string title=1;
+    string body=2;
+}
+message CloseIssueRequest{
+    int64 number=1;
+}
+message ListIssuesRequest{
+    string state=1;
+}
